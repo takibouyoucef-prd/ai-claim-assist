@@ -485,7 +485,7 @@ export function ClaimsCopilot() {
         )}
       </header>
 
-      <main className="mx-auto max-w-4xl px-6 py-8">
+      <main key={step} className="mx-auto max-w-4xl px-6 py-8 animate-in fade-in duration-300">
         {step === "start" && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <h2 className="text-3xl font-bold mb-3">Process insurance claims faster</h2>
@@ -493,9 +493,18 @@ export function ClaimsCopilot() {
               Intake a claim, upload damage photos, and let AI generate an assessment and estimate
               for your review.
             </p>
-            <Button size="lg" onClick={startClaim}>
-              Create New Claim
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button size="lg" onClick={startClaim}>
+                Create New Claim
+              </Button>
+              <Button size="lg" variant="outline" onClick={loadDemoClaim}>
+                Load Demo Claim
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4">
+              Demo loads a pre-filled sedan collision claim with photos, AI assessment, and estimate
+              ready to review.
+            </p>
           </div>
         )}
 
