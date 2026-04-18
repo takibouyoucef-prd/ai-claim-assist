@@ -22,7 +22,58 @@ type Assessment = {
   confidence: number;
 };
 
-type MediaFile = { name: string; dataUrl: string; type: string };
+type ImageFile = { name: string; dataUrl: string };
+type VideoFile = { name: string; dataUrl: string; frames: string[] };
+
+const extractVideoFrames = (dataUrl: string, count = 3): Promise<string[]> =>
+  new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.src = dataUrl;
+    video.muted = true;
+    video.playsInline = true;
+    video.crossOrigin = "anonymous";
+
+    const frames: string[] = [];
+
+    video.addEventListener("loadedmetadata", () => {
+      const duration = video.duration || 0;
+      if (!duration || !isFinite(duration)) {
+        resolve([]);
+        return;
+      }
+      // Pick timestamps at ~20%, 50%, 80% of duration
+      const stops = Array.from({ length: count }, (_, i) => duration * ((i + 1) / (count + 1)));
+      let idx = 0;
+
+      const canvas = document.createElement("canvas");
+      const w = video.videoWidth || 640;
+      const h = video.videoHeight || 360;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+
+      const captureNext = () => {
+        if (idx >= stops.length) {
+          resolve(frames);
+          return;
+        }
+        video.currentTime = stops[idx];
+      };
+
+      video.addEventListener("seeked", () => {
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, w, h);
+          frames.push(canvas.toDataURL("image/jpeg", 0.7));
+        }
+        idx += 1;
+        captureNext();
+      });
+
+      captureNext();
+    });
+
+    video.addEventListener("error", () => resolve([]));
+  });
 
 const generateClaimId = () =>
   `CLM-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -40,7 +91,9 @@ export function ClaimsCopilot() {
   const [claimId, setClaimId] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [description, setDescription] = useState("");
-  const [media, setMedia] = useState<MediaFile[]>([]);
+  const [images, setImages] = useState<ImageFile[]>([]);
+  const [video, setVideo] = useState<VideoFile | null>(null);
+  const [extracting, setExtracting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
@@ -49,7 +102,8 @@ export function ClaimsCopilot() {
     setClaimId(generateClaimId());
     setVehicleType("");
     setDescription("");
-    setMedia([]);
+    setImages([]);
+    setVideo(null);
     setAssessment(null);
     setDecision(null);
     setStep("intake");
@@ -64,22 +118,45 @@ export function ClaimsCopilot() {
     setStep("upload");
   };
 
-  const handleFiles = async (files: FileList | null) => {
+  const handleImages = async (files: FileList | null) => {
     if (!files) return;
-    const arr = Array.from(files).slice(0, 5);
+    const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
     const loaded = await Promise.all(
-      arr.map(async (f) => ({ name: f.name, dataUrl: await fileToDataUrl(f), type: f.type })),
+      arr.map(async (f) => ({ name: f.name, dataUrl: await fileToDataUrl(f) })),
     );
-    setMedia((prev) => [...prev, ...loaded].slice(0, 5));
+    setImages((prev) => [...prev, ...loaded].slice(0, 8));
+  };
+
+  const handleVideo = async (files: FileList | null) => {
+    if (!files || !files[0]) return;
+    const f = files[0];
+    if (!f.type.startsWith("video/")) {
+      toast.error("Please select a video file");
+      return;
+    }
+    setExtracting(true);
+    try {
+      const dataUrl = await fileToDataUrl(f);
+      const frames = await extractVideoFrames(dataUrl, 3);
+      setVideo({ name: f.name, dataUrl, frames });
+      toast.success(`Extracted ${frames.length} key frames`);
+    } catch {
+      toast.error("Could not process video");
+    } finally {
+      setExtracting(false);
+    }
   };
 
   const runAssessment = async () => {
     setLoading(true);
     setStep("assessment");
     try {
-      const images = media.filter((m) => m.type.startsWith("image/")).map((m) => m.dataUrl);
+      const allImages = [
+        ...images.map((m) => m.dataUrl),
+        ...(video?.frames ?? []),
+      ];
       const { data, error } = await supabase.functions.invoke("assess-claim", {
-        body: { vehicleType, description, images },
+        body: { vehicleType, description, images: allImages },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
