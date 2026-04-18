@@ -220,6 +220,47 @@ export function ClaimsCopilot() {
     }
   };
 
+  const generateEstimate = () => {
+    if (!assessment) return;
+    // Categorize AI line items into Parts vs Labor heuristically.
+    const partsKeywords = /(part|panel|bumper|fender|hood|door|glass|light|mirror|paint|trim|grille|wheel|tire|sensor|airbag|radiator)/i;
+    const labor: EstimateLine[] = [];
+    const parts: EstimateLine[] = [];
+    assessment.lineItems.forEach((li) => {
+      const isLabor = /labor|labour|hours?|install|repair time|paint(ing)? labor/i.test(li.item);
+      const isPart = partsKeywords.test(li.item);
+      if (isLabor && !isPart) {
+        labor.push({ item: li.item, category: "Labor", cost: li.cost });
+      } else if (isPart) {
+        parts.push({ item: li.item, category: "Parts", cost: li.cost });
+      } else {
+        // Default unknown items to Parts; include a small labor bucket if missing
+        parts.push({ item: li.item, category: "Parts", cost: li.cost });
+      }
+    });
+    if (labor.length === 0) {
+      // Add a default labor line so the agent can edit it
+      const partsTotal = parts.reduce((s, l) => s + l.cost, 0);
+      labor.push({ item: "Repair labor", category: "Labor", cost: Math.round(partsTotal * 0.35) });
+    }
+    setEstimateLines([...parts, ...labor]);
+    setStep("estimate");
+  };
+
+  const updateLine = (idx: number, patch: Partial<EstimateLine>) => {
+    setEstimateLines((prev) =>
+      prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)),
+    );
+  };
+
+  const removeLine = (idx: number) => {
+    setEstimateLines((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const addLine = (category: "Parts" | "Labor") => {
+    setEstimateLines((prev) => [...prev, { item: "New item", category, cost: 0 }]);
+  };
+
   const finalize = (choice: "approved" | "rejected") => {
     setDecision(choice);
     setStep("done");
