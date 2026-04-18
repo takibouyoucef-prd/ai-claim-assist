@@ -433,10 +433,48 @@ export function ClaimsCopilot() {
         )}
 
         {step === "assessment" && loading && (
-          <Card className="p-12 text-center">
-            <div className="inline-block w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="font-medium">Analyzing damage...</p>
-            <p className="text-sm text-muted-foreground mt-1">AI is reviewing your media</p>
+          <Card className="p-8">
+            <h2 className="text-xl font-semibold mb-1">AI Processing</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Step 3 of 5 — Running automated analysis on your media
+            </p>
+            <ul className="space-y-3">
+              {processingSteps.map((s, i) => (
+                <li key={i} className="flex items-center gap-3">
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                      s.status === "done"
+                        ? "bg-primary text-primary-foreground"
+                        : s.status === "active"
+                          ? "border-2 border-primary"
+                          : "border border-muted-foreground/30 text-muted-foreground"
+                    }`}
+                  >
+                    {s.status === "done" ? (
+                      "✓"
+                    ) : s.status === "active" ? (
+                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    ) : (
+                      i + 1
+                    )}
+                  </span>
+                  <span
+                    className={`text-sm ${
+                      s.status === "pending"
+                        ? "text-muted-foreground"
+                        : s.status === "active"
+                          ? "font-medium"
+                          : ""
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                  {s.status === "active" && (
+                    <span className="text-xs text-muted-foreground ml-auto">in progress…</span>
+                  )}
+                </li>
+              ))}
+            </ul>
           </Card>
         )}
 
@@ -452,15 +490,61 @@ export function ClaimsCopilot() {
               </div>
               <p className="text-sm leading-relaxed">{assessment.summary}</p>
 
-              <h3 className="font-medium mt-6 mb-2 text-sm">Identified Damages</h3>
+              {/* AI signal cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+                <div className="rounded border p-3">
+                  <div className="text-xs text-muted-foreground mb-1">Media Validation</div>
+                  <Badge
+                    variant={
+                      assessment.mediaValidation.status === "Sufficient coverage"
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
+                    {assessment.mediaValidation.status}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {assessment.mediaValidation.notes}
+                  </p>
+                </div>
+                <div className="rounded border p-3">
+                  <div className="text-xs text-muted-foreground mb-1">Fraud Risk</div>
+                  <Badge
+                    variant={
+                      assessment.fraudRisk.level === "High"
+                        ? "destructive"
+                        : assessment.fraudRisk.level === "Medium"
+                          ? "default"
+                          : "secondary"
+                    }
+                  >
+                    {assessment.fraudRisk.level}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {assessment.fraudRisk.reason}
+                  </p>
+                </div>
+                <div className="rounded border p-3">
+                  <div className="text-xs text-muted-foreground mb-1">Confidence Score</div>
+                  <div className="text-2xl font-semibold">{assessment.confidence}%</div>
+                  <div className="h-1.5 bg-muted rounded mt-2 overflow-hidden">
+                    <div
+                      className="h-full bg-primary"
+                      style={{ width: `${assessment.confidence}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <h3 className="font-medium mt-6 mb-2 text-sm">Damage Report</h3>
               <div className="space-y-2">
                 {assessment.damages.map((d, i) => (
                   <div key={i} className="flex items-start gap-3 p-3 rounded border">
                     <Badge
                       variant={
-                        d.severity === "Severe"
+                        d.severity === "High"
                           ? "destructive"
-                          : d.severity === "Moderate"
+                          : d.severity === "Medium"
                             ? "default"
                             : "secondary"
                       }
@@ -468,7 +552,8 @@ export function ClaimsCopilot() {
                       {d.severity}
                     </Badge>
                     <div className="flex-1">
-                      <div className="font-medium text-sm">{d.part}</div>
+                      <div className="font-medium text-sm">{d.location}</div>
+                      <div className="text-xs text-muted-foreground mb-1">Type: {d.type}</div>
                       <div className="text-sm text-muted-foreground">{d.description}</div>
                     </div>
                   </div>
