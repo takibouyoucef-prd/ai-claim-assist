@@ -19,6 +19,7 @@ type Damage = {
   type: string;
   severity: "Low" | "Medium" | "High" | string;
   description: string;
+  cost?: number; // per-damage estimated cost, agent-editable
   imageIndex?: number; // which preview image the marker belongs to
   x?: number; // 0-100 percentage
   y?: number; // 0-100 percentage
