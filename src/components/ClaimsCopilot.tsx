@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { DamageAnnotator } from "./DamageAnnotator";
 import { ExplainChat } from "./ExplainChat";
+import demoImg1 from "@/assets/demo-damage-1.jpg";
+import demoImg2 from "@/assets/demo-damage-2.jpg";
 
 type Step = "start" | "intake" | "upload" | "processing" | "report" | "estimate" | "review" | "done";
 
