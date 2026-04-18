@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-type Step = "start" | "intake" | "upload" | "assessment" | "estimate" | "review" | "done";
+type Step = "start" | "intake" | "upload" | "processing" | "report" | "estimate" | "review" | "done";
+
+type EstimateLine = { item: string; category: "Parts" | "Labor"; cost: number };
 
 type Damage = {
   location: string;
@@ -111,6 +113,7 @@ export function ClaimsCopilot() {
     { label: "Detecting damage", status: "pending" },
     { label: "Estimating cost", status: "pending" },
   ]);
+  const [estimateLines, setEstimateLines] = useState<EstimateLine[]>([]);
 
   const startClaim = () => {
     setClaimId(generateClaimId());
