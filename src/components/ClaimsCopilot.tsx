@@ -378,7 +378,15 @@ export function ClaimsCopilot() {
             </div>
           )}
         </div>
-        {step !== "start" && <Stepper step={step} />}
+        {step !== "start" && (
+          <Stepper
+            step={step}
+            hasMedia={images.length > 0 || !!video}
+            hasAssessment={!!assessment}
+            hasEstimate={estimateLines.length > 0}
+            decision={decision}
+          />
+        )}
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-8">
@@ -801,15 +809,61 @@ export function ClaimsCopilot() {
               );
             })()}
 
+            {/* Recommended Next Steps — visible from report onward */}
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Recommended Next Steps</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Based on AI confidence, fraud signals, and media coverage
+              </p>
+              <ul className="space-y-2">
+                {getNextSteps().map((s, i) => (
+                  <li
+                    key={i}
+                    className={`flex items-start gap-2 p-3 rounded border text-sm ${
+                      s.tone === "danger"
+                        ? "border-destructive/40 bg-destructive/5"
+                        : s.tone === "warn"
+                          ? "border-amber-500/40 bg-amber-500/5"
+                          : s.tone === "good"
+                            ? "border-emerald-500/40 bg-emerald-500/5"
+                            : "border-border"
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 ${
+                        s.tone === "danger"
+                          ? "text-destructive"
+                          : s.tone === "warn"
+                            ? "text-amber-600"
+                            : s.tone === "good"
+                              ? "text-emerald-600"
+                              : "text-muted-foreground"
+                      }`}
+                    >
+                      ●
+                    </span>
+                    <span>{s.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+
             {(step === "estimate" || step === "review") && (
               <Card className="p-6">
                 <h2 className="text-xl font-semibold mb-1">Review & Approve</h2>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Step 5 of 5 — Your decision finalizes the claim
+                  Step 5 of 6 — Approve, escalate, or reject the claim
                 </p>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Button onClick={() => finalize("approved")} className="flex-1">
                     Approve Claim
+                  </Button>
+                  <Button
+                    onClick={() => finalize("escalated")}
+                    variant="secondary"
+                    className="flex-1"
+                  >
+                    Escalate
                   </Button>
                   <Button
                     onClick={() => finalize("rejected")}
@@ -826,15 +880,25 @@ export function ClaimsCopilot() {
 
         {step === "done" && (
           <Card className="p-12 text-center">
-            <div className="text-4xl mb-3">{decision === "approved" ? "✓" : "✕"}</div>
+            <div className="text-4xl mb-3">
+              {decision === "approved" ? "✓" : decision === "escalated" ? "⚑" : "✕"}
+            </div>
             <h2 className="text-2xl font-semibold mb-2">
-              Claim {decision === "approved" ? "Approved" : "Rejected"}
+              Claim{" "}
+              {decision === "approved"
+                ? "Approved"
+                : decision === "escalated"
+                  ? "Escalated"
+                  : "Rejected"}
             </h2>
             <p className="text-muted-foreground mb-1 font-mono text-sm">{claimId}</p>
             {decision === "approved" && assessment && (
               <p className="text-muted-foreground">
                 Payout: ${assessment.estimatedCost.toLocaleString()}
               </p>
+            )}
+            {decision === "escalated" && (
+              <p className="text-muted-foreground">Forwarded to senior adjuster for review.</p>
             )}
             <Button onClick={startClaim} className="mt-6">
               Create Another Claim
@@ -860,47 +924,97 @@ export function ClaimsCopilot() {
   );
 }
 
-function Stepper({ step }: { step: Step }) {
-  const steps = [
-    { key: "intake", label: "Intake" },
-    { key: "upload", label: "Media" },
-    { key: "assessment", label: "Assessment" },
-    { key: "estimate", label: "Estimate" },
-    { key: "review", label: "Review" },
+function Stepper({
+  step,
+  hasMedia,
+  hasAssessment,
+  hasEstimate,
+  decision,
+}: {
+  step: Step;
+  hasMedia: boolean;
+  hasAssessment: boolean;
+  hasEstimate: boolean;
+  decision: "approved" | "rejected" | "escalated" | null;
+}) {
+  // 6-stage workflow. The final stage label changes based on the agent's decision.
+  const finalLabel =
+    decision === "approved"
+      ? "Approved"
+      : decision === "escalated"
+        ? "Escalated"
+        : decision === "rejected"
+          ? "Rejected"
+          : "Approved / Escalated";
+
+  const stages = [
+    { key: "created", label: "Claim Created" },
+    { key: "media", label: "Media Uploaded" },
+    { key: "assessed", label: "AI Assessed" },
+    { key: "estimate", label: "Estimate Generated" },
+    { key: "reviewed", label: "Reviewed" },
+    { key: "final", label: finalLabel },
   ];
-  // Map current step to a stepper index
-  const stepIndexMap: Record<string, number> = {
-    intake: 0,
-    upload: 1,
-    processing: 2,
-    report: 2,
-    estimate: 3,
-    review: 4,
-    done: 4,
+
+  // Determine which stage is currently active.
+  let activeIndex = 0;
+  if (step === "intake") activeIndex = 0;
+  else if (step === "upload") activeIndex = hasMedia ? 1 : 1;
+  else if (step === "processing") activeIndex = 2;
+  else if (step === "report") activeIndex = 2;
+  else if (step === "estimate") activeIndex = hasEstimate ? 3 : 3;
+  else if (step === "review") activeIndex = 4;
+  else if (step === "done") activeIndex = 5;
+
+  // Determine completion: a stage is "done" if its prerequisite data exists
+  // OR the workflow has progressed past it.
+  const isDone = (i: number) => {
+    if (step === "done" && i < 5) return true;
+    if (i === 0) return step !== "intake";
+    if (i === 1) return hasMedia && (step === "processing" || step === "report" || step === "estimate" || step === "review" || step === "done");
+    if (i === 2) return hasAssessment && (step === "report" || step === "estimate" || step === "review" || step === "done");
+    if (i === 3) return hasEstimate && (step === "estimate" || step === "review" || step === "done");
+    if (i === 4) return step === "review" || step === "done";
+    return false;
   };
-  const activeIndex = stepIndexMap[step] ?? 0;
+
   return (
-    <div className="mx-auto max-w-4xl px-6 pb-3 flex gap-2 text-xs">
-      {steps.map((s, i) => {
-        const current = i === activeIndex;
-        const done = i < activeIndex || step === "done";
-        return (
-          <div key={s.key} className="flex items-center gap-2 flex-1">
-            <div
-              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium ${
-                done
-                  ? "bg-primary text-primary-foreground"
-                  : current
-                    ? "bg-foreground text-background"
-                    : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {i + 1}
+    <div className="mx-auto max-w-4xl px-6 pb-3 overflow-x-auto">
+      <div className="flex gap-1 text-xs min-w-fit">
+        {stages.map((s, i) => {
+          const done = isDone(i);
+          const current = i === activeIndex && step !== "done";
+          const isFinalDone = i === 5 && step === "done";
+          return (
+            <div key={s.key} className="flex items-center gap-2 flex-1 min-w-[120px]">
+              <div
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium shrink-0 ${
+                  isFinalDone
+                    ? decision === "approved"
+                      ? "bg-emerald-600 text-white"
+                      : decision === "escalated"
+                        ? "bg-amber-500 text-white"
+                        : "bg-destructive text-destructive-foreground"
+                    : done
+                      ? "bg-primary text-primary-foreground"
+                      : current
+                        ? "bg-foreground text-background"
+                        : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {done || isFinalDone ? "✓" : i + 1}
+              </div>
+              <span
+                className={`truncate ${
+                  current ? "font-medium" : isFinalDone ? "font-medium" : "text-muted-foreground"
+                }`}
+              >
+                {s.label}
+              </span>
             </div>
-            <span className={current ? "font-medium" : "text-muted-foreground"}>{s.label}</span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
