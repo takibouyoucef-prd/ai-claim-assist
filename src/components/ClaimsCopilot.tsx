@@ -477,7 +477,7 @@ export function ClaimsCopilot() {
           </Card>
         )}
 
-        {step === "assessment" && loading && (
+        {step === "processing" && loading && (
           <Card className="p-8">
             <h2 className="text-xl font-semibold mb-1">AI Processing</h2>
             <p className="text-sm text-muted-foreground mb-6">
@@ -523,19 +523,19 @@ export function ClaimsCopilot() {
           </Card>
         )}
 
-        {(step === "estimate" || step === "review") && assessment && (
+        {(step === "report" || step === "estimate" || step === "review") && assessment && (
           <div className="space-y-4">
+            {/* Damage Report card — always visible from report step onward */}
             <Card className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h2 className="text-xl font-semibold">AI Assessment</h2>
-                  <p className="text-sm text-muted-foreground">Step 3 of 5</p>
+                  <p className="text-sm text-muted-foreground">Step 3 of 5 — Damage report</p>
                 </div>
                 <Badge variant="outline">Confidence: {assessment.confidence}%</Badge>
               </div>
               <p className="text-sm leading-relaxed">{assessment.summary}</p>
 
-              {/* AI signal cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
                 <div className="rounded border p-3">
                   <div className="text-xs text-muted-foreground mb-1">Media Validation</div>
@@ -604,50 +604,123 @@ export function ClaimsCopilot() {
                   </div>
                 ))}
               </div>
+
+              {step === "report" && (
+                <div className="flex justify-end mt-6">
+                  <Button onClick={generateEstimate}>Generate Estimate</Button>
+                </div>
+              )}
             </Card>
 
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-1">Estimate</h2>
-              <p className="text-sm text-muted-foreground mb-4">Step 4 of 5</p>
-              <table className="w-full text-sm">
-                <tbody>
-                  {assessment.lineItems.map((li, i) => (
-                    <tr key={i} className="border-b last:border-0">
-                      <td className="py-2">{li.item}</td>
-                      <td className="py-2 text-right font-mono">${li.cost.toLocaleString()}</td>
-                    </tr>
-                  ))}
-                  <tr className="font-semibold">
-                    <td className="py-3">Total Estimate</td>
-                    <td className="py-3 text-right font-mono">
-                      ${assessment.estimatedCost.toLocaleString()}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <div className="mt-4 text-sm">
-                <span className="text-muted-foreground">AI Recommendation: </span>
-                <Badge variant="outline">{assessment.recommendation}</Badge>
-              </div>
-            </Card>
+            {/* Editable Estimate card — only after Generate Estimate is clicked */}
+            {(step === "estimate" || step === "review") && (() => {
+              const partsTotal = estimateLines
+                .filter((l) => l.category === "Parts")
+                .reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const laborTotal = estimateLines
+                .filter((l) => l.category === "Labor")
+                .reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const total = partsTotal + laborTotal;
+              return (
+                <Card className="p-6">
+                  <h2 className="text-xl font-semibold mb-1">Estimate</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Step 4 of 5 — Review and edit the cost breakdown
+                  </p>
 
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-1">Review & Approve</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Step 5 of 5 — Your decision finalizes the claim
-              </p>
-              <div className="flex gap-3">
-                <Button onClick={() => finalize("approved")} className="flex-1">
-                  Approve Claim
-                </Button>
-                <Button
-                  onClick={() => finalize("rejected")}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Reject
-                </Button>
-              </div>
+                  {(["Parts", "Labor"] as const).map((cat) => {
+                    const lines = estimateLines
+                      .map((l, i) => ({ l, i }))
+                      .filter(({ l }) => l.category === cat);
+                    const subtotal = lines.reduce((s, { l }) => s + (Number(l.cost) || 0), 0);
+                    return (
+                      <div key={cat} className="mb-5">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-medium text-sm">{cat}</h3>
+                          <button
+                            onClick={() => addLine(cat)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            + Add line
+                          </button>
+                        </div>
+                        {lines.length === 0 && (
+                          <p className="text-xs text-muted-foreground italic">No {cat.toLowerCase()} items.</p>
+                        )}
+                        <div className="space-y-2">
+                          {lines.map(({ l, i }) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <Input
+                                value={l.item}
+                                onChange={(e) => updateLine(i, { item: e.target.value })}
+                                className="flex-1"
+                              />
+                              <div className="flex items-center">
+                                <span className="text-sm text-muted-foreground mr-1">$</span>
+                                <Input
+                                  type="number"
+                                  value={l.cost}
+                                  onChange={(e) =>
+                                    updateLine(i, { cost: Number(e.target.value) || 0 })
+                                  }
+                                  className="w-28 text-right font-mono"
+                                />
+                              </div>
+                              <button
+                                onClick={() => removeLine(i)}
+                                className="text-muted-foreground hover:text-destructive text-sm px-2"
+                                aria-label="Remove line"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="text-xs text-muted-foreground text-right mt-2">
+                          {cat} subtotal:{" "}
+                          <span className="font-mono">${subtotal.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div className="border-t pt-3 flex items-center justify-between">
+                    <span className="font-semibold">Total Estimated Cost</span>
+                    <span className="font-mono text-lg font-semibold">
+                      ${total.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    AI suggested ${assessment.estimatedCost.toLocaleString()} ·
+                    Recommendation:{" "}
+                    <Badge variant="outline" className="ml-1">
+                      {assessment.recommendation}
+                    </Badge>
+                  </div>
+                </Card>
+              );
+            })()}
+
+            {(step === "estimate" || step === "review") && (
+              <Card className="p-6">
+                <h2 className="text-xl font-semibold mb-1">Review & Approve</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Step 5 of 5 — Your decision finalizes the claim
+                </p>
+                <div className="flex gap-3">
+                  <Button onClick={() => finalize("approved")} className="flex-1">
+                    Approve Claim
+                  </Button>
+                  <Button
+                    onClick={() => finalize("rejected")}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </Card>
+            )}
             </Card>
           </div>
         )}
