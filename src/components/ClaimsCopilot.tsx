@@ -113,7 +113,7 @@ export function ClaimsCopilot() {
   const [extracting, setExtracting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [assessment, setAssessment] = useState<Assessment | null>(null);
-  const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
+  const [decision, setDecision] = useState<"approved" | "rejected" | "escalated" | null>(null);
   const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([
     { label: "Validating media", status: "pending" },
     { label: "Detecting damage", status: "pending" },
