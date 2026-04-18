@@ -626,29 +626,20 @@ export function ClaimsCopilot() {
                 </div>
               </div>
 
-              <h3 className="font-medium mt-6 mb-2 text-sm">Damage Report</h3>
-              <div className="space-y-2">
-                {assessment.damages.map((d, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded border">
-                    <Badge
-                      variant={
-                        d.severity === "High"
-                          ? "destructive"
-                          : d.severity === "Medium"
-                            ? "default"
-                            : "secondary"
-                      }
-                    >
-                      {d.severity}
-                    </Badge>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{d.location}</div>
-                      <div className="text-xs text-muted-foreground mb-1">Type: {d.type}</div>
-                      <div className="text-sm text-muted-foreground">{d.description}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <h3 className="font-medium mt-6 mb-3 text-sm">Damage Preview & Annotations</h3>
+              <DamageAnnotator
+                previews={[
+                  ...images.map((m, i) => ({ src: m.dataUrl, label: `Image ${i + 1}` })),
+                  ...(video?.frames ?? []).map((src, i) => ({
+                    src,
+                    label: `Video frame ${i + 1}`,
+                  })),
+                ]}
+                damages={assessment.damages}
+                onAdd={addDamage}
+                onUpdate={updateDamage}
+                onRemove={removeDamage}
+              />
 
               {step === "report" && (
                 <div className="flex justify-end mt-6">
