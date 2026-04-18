@@ -135,6 +135,100 @@ export function ClaimsCopilot() {
     setStep("intake");
   };
 
+  const loadDemoClaim = () => {
+    const demoAssessment: Assessment = {
+      summary:
+        "Front-end collision with moderate cosmetic and structural damage. Front bumper and headlight assembly require replacement; driver door panel can be repaired and repainted. Rear quarter panel shows secondary scrape damage consistent with the reported incident.",
+      damages: [
+        {
+          location: "Front bumper",
+          type: "Dent",
+          severity: "High",
+          description: "Deep crumple across the center of the front bumper, structural deformation visible.",
+          cost: 1200,
+          imageIndex: 0,
+          x: 52,
+          y: 58,
+        },
+        {
+          location: "Driver-side door",
+          type: "Scratch",
+          severity: "Medium",
+          description: "Long horizontal paint scratch running along the driver door panel.",
+          cost: 480,
+          imageIndex: 0,
+          x: 18,
+          y: 52,
+        },
+        {
+          location: "Left headlight",
+          type: "Broken Part",
+          severity: "High",
+          description: "Headlight assembly cracked and partially detached, requires replacement.",
+          cost: 650,
+          imageIndex: 0,
+          x: 22,
+          y: 38,
+        },
+        {
+          location: "Rear quarter panel",
+          type: "Paint Damage",
+          severity: "Medium",
+          description: "Paint scrape and shallow dent on the passenger-side rear quarter panel.",
+          cost: 420,
+          imageIndex: 1,
+          x: 38,
+          y: 55,
+        },
+      ],
+      estimatedCost: 2750,
+      lineItems: [
+        { item: "Front bumper replacement", cost: 1200 },
+        { item: "Headlight assembly", cost: 650 },
+        { item: "Door panel paint & repair", cost: 480 },
+        { item: "Rear quarter panel touch-up", cost: 420 },
+        { item: "Labor (8 hours)", cost: 720 },
+      ],
+      mediaValidation: {
+        status: "Sufficient coverage",
+        notes: "Front and rear views provided with clear lighting. All reported damage areas are visible.",
+      },
+      fraudRisk: {
+        level: "Low",
+        reason: "Damage pattern matches reported incident; no inconsistencies detected.",
+      },
+      recommendation: "Approve",
+      confidence: 87,
+    };
+
+    setClaimId(generateClaimId());
+    setVehicleType("Sedan");
+    setDescription(
+      "Rear-ended at low speed in a parking lot, then pushed into a concrete barrier causing front-end damage. Driver and passenger uninjured.",
+    );
+    setImages([
+      { name: "front-damage.jpg", dataUrl: demoImg1 },
+      { name: "rear-damage.jpg", dataUrl: demoImg2 },
+    ]);
+    setVideo(null);
+    setAssessment(demoAssessment);
+    setDecision(null);
+    setEstimateLines([
+      { item: "Front bumper replacement", category: "Parts", cost: 1200 },
+      { item: "Headlight assembly", category: "Parts", cost: 650 },
+      { item: "Door panel paint & repair", category: "Parts", cost: 480 },
+      { item: "Rear quarter panel touch-up", category: "Parts", cost: 420 },
+      { item: "Labor (8 hours)", category: "Labor", cost: 720 },
+    ]);
+    setProcessingSteps([
+      { label: "Validating media", status: "done" },
+      { label: "Detecting damage", status: "done" },
+      { label: "Estimating cost", status: "done" },
+    ]);
+    setStep("estimate");
+    toast.success("Demo claim loaded — ready for review");
+  };
+
   const submitIntake = (e: React.FormEvent) => {
     e.preventDefault();
     if (!vehicleType || !description.trim()) {
