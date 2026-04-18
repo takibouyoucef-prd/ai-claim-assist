@@ -754,17 +754,22 @@ function Stepper({ step }: { step: Step }) {
     { key: "estimate", label: "Estimate" },
     { key: "review", label: "Review" },
   ];
-  const activeIndex = steps.findIndex((s) =>
-    s.key === step || (step === "estimate" && s.key === "assessment") || (step === "done" && true),
-  );
+  // Map current step to a stepper index
+  const stepIndexMap: Record<string, number> = {
+    intake: 0,
+    upload: 1,
+    processing: 2,
+    report: 2,
+    estimate: 3,
+    review: 4,
+    done: 4,
+  };
+  const activeIndex = stepIndexMap[step] ?? 0;
   return (
     <div className="mx-auto max-w-4xl px-6 pb-3 flex gap-2 text-xs">
       {steps.map((s, i) => {
-        const current = s.key === step || (step === "estimate" && s.key === "estimate");
-        const done =
-          step === "done" ||
-          steps.findIndex((x) => x.key === step) > i ||
-          (step === "estimate" && i < 3);
+        const current = i === activeIndex;
+        const done = i < activeIndex || step === "done";
         return (
           <div key={s.key} className="flex items-center gap-2 flex-1">
             <div
