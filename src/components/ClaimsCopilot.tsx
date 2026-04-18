@@ -276,6 +276,36 @@ export function ClaimsCopilot() {
     setEstimateLines((prev) => [...prev, { item: "New item", category, cost: 0 }]);
   };
 
+  const updateDamage = (idx: number, patch: Partial<Damage>) => {
+    setAssessment((prev) =>
+      prev
+        ? { ...prev, damages: prev.damages.map((d, i) => (i === idx ? { ...d, ...patch } : d)) }
+        : prev,
+    );
+  };
+
+  const removeDamage = (idx: number) => {
+    setAssessment((prev) =>
+      prev ? { ...prev, damages: prev.damages.filter((_, i) => i !== idx) } : prev,
+    );
+  };
+
+  const addDamage = (imageIndex: number, x: number, y: number) => {
+    setAssessment((prev) => {
+      if (!prev) return prev;
+      const newDamage: Damage = {
+        location: "New location",
+        type: "Dent",
+        severity: "Medium",
+        description: "Manually added damage",
+        imageIndex,
+        x,
+        y,
+      };
+      return { ...prev, damages: [...prev.damages, newDamage] };
+    });
+  };
+
   const finalize = (choice: "approved" | "rejected") => {
     setDecision(choice);
     setStep("done");
