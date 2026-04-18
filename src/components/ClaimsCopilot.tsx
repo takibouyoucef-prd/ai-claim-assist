@@ -167,7 +167,7 @@ export function ClaimsCopilot() {
 
   const runAssessment = async () => {
     setLoading(true);
-    setStep("assessment");
+    setStep("processing");
     const initial: ProcessingStep[] = [
       { label: "Validating media", status: "active" },
       { label: "Detecting damage", status: "pending" },
@@ -209,7 +209,7 @@ export function ClaimsCopilot() {
       // Brief pause so the user sees all steps complete
       await new Promise((r) => setTimeout(r, 400));
       setAssessment(data.assessment);
-      setStep("estimate");
+      setStep("report");
     } catch (e: any) {
       toast.error(e.message || "Assessment failed");
       setStep("upload");
