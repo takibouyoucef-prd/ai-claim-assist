@@ -211,7 +211,19 @@ export function ClaimsCopilot() {
       ]);
       // Brief pause so the user sees all steps complete
       await new Promise((r) => setTimeout(r, 400));
-      setAssessment(data.assessment);
+      // Auto-assign default marker positions to AI-detected damages so they
+      // immediately appear on the preview panel and can be repositioned later.
+      const totalImages = images.length + (video?.frames.length ?? 0);
+      const annotated: Assessment = {
+        ...data.assessment,
+        damages: (data.assessment.damages || []).map((d: Damage, i: number) => ({
+          ...d,
+          imageIndex: totalImages > 0 ? i % totalImages : 0,
+          x: 25 + ((i * 17) % 50),
+          y: 25 + ((i * 23) % 50),
+        })),
+      };
+      setAssessment(annotated);
       setStep("report");
     } catch (e: any) {
       toast.error(e.message || "Assessment failed");
