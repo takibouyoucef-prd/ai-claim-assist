@@ -801,6 +801,20 @@ export function ClaimsCopilot() {
           </Card>
         )}
       </main>
+
+      {assessment && step !== "start" && (
+        <ExplainChat
+          context={{
+            claimId,
+            vehicleType,
+            description,
+            step,
+            assessment,
+            estimateLines,
+            decision,
+          }}
+        />
+      )}
     </div>
   );
 }
