@@ -721,7 +721,6 @@ export function ClaimsCopilot() {
                 </div>
               </Card>
             )}
-            </Card>
           </div>
         )}
 
