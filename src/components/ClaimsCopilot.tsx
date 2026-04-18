@@ -22,7 +22,58 @@ type Assessment = {
   confidence: number;
 };
 
-type MediaFile = { name: string; dataUrl: string; type: string };
+type ImageFile = { name: string; dataUrl: string };
+type VideoFile = { name: string; dataUrl: string; frames: string[] };
+
+const extractVideoFrames = (dataUrl: string, count = 3): Promise<string[]> =>
+  new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.src = dataUrl;
+    video.muted = true;
+    video.playsInline = true;
+    video.crossOrigin = "anonymous";
+
+    const frames: string[] = [];
+
+    video.addEventListener("loadedmetadata", () => {
+      const duration = video.duration || 0;
+      if (!duration || !isFinite(duration)) {
+        resolve([]);
+        return;
+      }
+      // Pick timestamps at ~20%, 50%, 80% of duration
+      const stops = Array.from({ length: count }, (_, i) => duration * ((i + 1) / (count + 1)));
+      let idx = 0;
+
+      const canvas = document.createElement("canvas");
+      const w = video.videoWidth || 640;
+      const h = video.videoHeight || 360;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+
+      const captureNext = () => {
+        if (idx >= stops.length) {
+          resolve(frames);
+          return;
+        }
+        video.currentTime = stops[idx];
+      };
+
+      video.addEventListener("seeked", () => {
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, w, h);
+          frames.push(canvas.toDataURL("image/jpeg", 0.7));
+        }
+        idx += 1;
+        captureNext();
+      });
+
+      captureNext();
+    });
+
+    video.addEventListener("error", () => resolve([]));
+  });
 
 const generateClaimId = () =>
   `CLM-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -40,7 +91,9 @@ export function ClaimsCopilot() {
   const [claimId, setClaimId] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [description, setDescription] = useState("");
-  const [media, setMedia] = useState<MediaFile[]>([]);
+  const [images, setImages] = useState<ImageFile[]>([]);
+  const [video, setVideo] = useState<VideoFile | null>(null);
+  const [extracting, setExtracting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
@@ -49,7 +102,8 @@ export function ClaimsCopilot() {
     setClaimId(generateClaimId());
     setVehicleType("");
     setDescription("");
-    setMedia([]);
+    setImages([]);
+    setVideo(null);
     setAssessment(null);
     setDecision(null);
     setStep("intake");
@@ -64,22 +118,45 @@ export function ClaimsCopilot() {
     setStep("upload");
   };
 
-  const handleFiles = async (files: FileList | null) => {
+  const handleImages = async (files: FileList | null) => {
     if (!files) return;
-    const arr = Array.from(files).slice(0, 5);
+    const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
     const loaded = await Promise.all(
-      arr.map(async (f) => ({ name: f.name, dataUrl: await fileToDataUrl(f), type: f.type })),
+      arr.map(async (f) => ({ name: f.name, dataUrl: await fileToDataUrl(f) })),
     );
-    setMedia((prev) => [...prev, ...loaded].slice(0, 5));
+    setImages((prev) => [...prev, ...loaded].slice(0, 8));
+  };
+
+  const handleVideo = async (files: FileList | null) => {
+    if (!files || !files[0]) return;
+    const f = files[0];
+    if (!f.type.startsWith("video/")) {
+      toast.error("Please select a video file");
+      return;
+    }
+    setExtracting(true);
+    try {
+      const dataUrl = await fileToDataUrl(f);
+      const frames = await extractVideoFrames(dataUrl, 3);
+      setVideo({ name: f.name, dataUrl, frames });
+      toast.success(`Extracted ${frames.length} key frames`);
+    } catch {
+      toast.error("Could not process video");
+    } finally {
+      setExtracting(false);
+    }
   };
 
   const runAssessment = async () => {
     setLoading(true);
     setStep("assessment");
     try {
-      const images = media.filter((m) => m.type.startsWith("image/")).map((m) => m.dataUrl);
+      const allImages = [
+        ...images.map((m) => m.dataUrl),
+        ...(video?.frames ?? []),
+      ];
       const { data, error } = await supabase.functions.invoke("assess-claim", {
-        body: { vehicleType, description, images },
+        body: { vehicleType, description, images: allImages },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -177,44 +254,132 @@ export function ClaimsCopilot() {
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-1">Upload Media</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Step 2 of 5 — Add photos or video of the damage (up to 5 files)
+              Step 2 of 5 — Add damage photos and (optionally) one video
             </p>
-            <label className="block border-2 border-dashed rounded-md p-8 text-center cursor-pointer hover:bg-muted/50 transition-colors">
-              <input
-                type="file"
-                accept="image/*,video/*"
-                multiple
-                className="hidden"
-                onChange={(e) => handleFiles(e.target.files)}
-              />
-              <p className="text-sm text-muted-foreground">
-                Click to select images or video
-              </p>
-            </label>
-            {media.length > 0 && (
-              <div className="grid grid-cols-3 gap-3 mt-4">
-                {media.map((m, i) => (
-                  <div key={i} className="relative aspect-video rounded-md overflow-hidden bg-muted">
-                    {m.type.startsWith("image/") ? (
-                      <img src={m.dataUrl} alt={m.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <video src={m.dataUrl} className="w-full h-full object-cover" />
-                    )}
-                    <button
-                      onClick={() => setMedia((prev) => prev.filter((_, idx) => idx !== i))}
-                      className="absolute top-1 right-1 bg-background/80 rounded px-1.5 text-xs"
-                    >
-                      ✕
-                    </button>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Images uploader */}
+              <div>
+                <Label className="mb-1.5 block">Images</Label>
+                <label className="block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => handleImages(e.target.files)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Click to select images (multiple allowed)
+                  </p>
+                </label>
+              </div>
+
+              {/* Video uploader */}
+              <div>
+                <Label className="mb-1.5 block">Video (optional)</Label>
+                <label className="block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50">
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={(e) => handleVideo(e.target.files)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {extracting ? "Extracting key frames..." : "Click to select one video file"}
+                  </p>
+                </label>
+              </div>
+            </div>
+
+            {(images.length > 0 || video) && (
+              <div className="mt-6 space-y-5">
+                <div className="flex items-center gap-2">
+                  <Badge>Media Uploaded</Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {images.length} image{images.length === 1 ? "" : "s"}
+                    {video ? ` · 1 video (${video.frames.length} key frames)` : ""}
+                  </span>
+                </div>
+
+                {images.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Images</h3>
+                    <div className="grid grid-cols-4 gap-3">
+                      {images.map((m, i) => (
+                        <div
+                          key={i}
+                          className="relative aspect-square rounded-md overflow-hidden bg-muted"
+                        >
+                          <img
+                            src={m.dataUrl}
+                            alt={m.name}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            onClick={() =>
+                              setImages((prev) => prev.filter((_, idx) => idx !== i))
+                            }
+                            className="absolute top-1 right-1 bg-background/80 rounded px-1.5 text-xs"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
+
+                {video && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium">
+                        Video key frames —{" "}
+                        <span className="text-muted-foreground font-normal">{video.name}</span>
+                      </h3>
+                      <button
+                        onClick={() => setVideo(null)}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Remove video
+                      </button>
+                    </div>
+                    {video.frames.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-3">
+                        {video.frames.map((src, i) => (
+                          <div
+                            key={i}
+                            className="relative aspect-video rounded-md overflow-hidden bg-muted border"
+                          >
+                            <img
+                              src={src}
+                              alt={`Frame ${i + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute bottom-1 left-1 bg-background/80 rounded px-1.5 text-[10px] font-mono">
+                              Frame {i + 1}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Could not extract frames from this video.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
+
             <div className="flex justify-between mt-6">
               <Button variant="outline" onClick={() => setStep("intake")}>
                 Back
               </Button>
-              <Button onClick={runAssessment} disabled={media.length === 0}>
+              <Button
+                onClick={runAssessment}
+                disabled={images.length === 0 && !video}
+              >
                 Run AI Assessment
               </Button>
             </div>
