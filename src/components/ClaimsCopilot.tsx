@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { DamageAnnotator } from "./DamageAnnotator";
 
 type Step = "start" | "intake" | "upload" | "processing" | "report" | "estimate" | "review" | "done";
 
@@ -18,6 +19,9 @@ type Damage = {
   type: string;
   severity: "Low" | "Medium" | "High" | string;
   description: string;
+  imageIndex?: number; // which preview image the marker belongs to
+  x?: number; // 0-100 percentage
+  y?: number; // 0-100 percentage
 };
 type LineItem = { item: string; cost: number };
 type Assessment = {
@@ -208,7 +212,19 @@ export function ClaimsCopilot() {
       ]);
       // Brief pause so the user sees all steps complete
       await new Promise((r) => setTimeout(r, 400));
-      setAssessment(data.assessment);
+      // Auto-assign default marker positions to AI-detected damages so they
+      // immediately appear on the preview panel and can be repositioned later.
+      const totalImages = images.length + (video?.frames.length ?? 0);
+      const annotated: Assessment = {
+        ...data.assessment,
+        damages: (data.assessment.damages || []).map((d: Damage, i: number) => ({
+          ...d,
+          imageIndex: totalImages > 0 ? i % totalImages : 0,
+          x: 25 + ((i * 17) % 50),
+          y: 25 + ((i * 23) % 50),
+        })),
+      };
+      setAssessment(annotated);
       setStep("report");
     } catch (e: any) {
       toast.error(e.message || "Assessment failed");
@@ -259,6 +275,36 @@ export function ClaimsCopilot() {
 
   const addLine = (category: "Parts" | "Labor") => {
     setEstimateLines((prev) => [...prev, { item: "New item", category, cost: 0 }]);
+  };
+
+  const updateDamage = (idx: number, patch: Partial<Damage>) => {
+    setAssessment((prev) =>
+      prev
+        ? { ...prev, damages: prev.damages.map((d, i) => (i === idx ? { ...d, ...patch } : d)) }
+        : prev,
+    );
+  };
+
+  const removeDamage = (idx: number) => {
+    setAssessment((prev) =>
+      prev ? { ...prev, damages: prev.damages.filter((_, i) => i !== idx) } : prev,
+    );
+  };
+
+  const addDamage = (imageIndex: number, x: number, y: number) => {
+    setAssessment((prev) => {
+      if (!prev) return prev;
+      const newDamage: Damage = {
+        location: "New location",
+        type: "Dent",
+        severity: "Medium",
+        description: "Manually added damage",
+        imageIndex,
+        x,
+        y,
+      };
+      return { ...prev, damages: [...prev.damages, newDamage] };
+    });
   };
 
   const finalize = (choice: "approved" | "rejected") => {
@@ -581,29 +627,20 @@ export function ClaimsCopilot() {
                 </div>
               </div>
 
-              <h3 className="font-medium mt-6 mb-2 text-sm">Damage Report</h3>
-              <div className="space-y-2">
-                {assessment.damages.map((d, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded border">
-                    <Badge
-                      variant={
-                        d.severity === "High"
-                          ? "destructive"
-                          : d.severity === "Medium"
-                            ? "default"
-                            : "secondary"
-                      }
-                    >
-                      {d.severity}
-                    </Badge>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{d.location}</div>
-                      <div className="text-xs text-muted-foreground mb-1">Type: {d.type}</div>
-                      <div className="text-sm text-muted-foreground">{d.description}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <h3 className="font-medium mt-6 mb-3 text-sm">Damage Preview & Annotations</h3>
+              <DamageAnnotator
+                previews={[
+                  ...images.map((m, i) => ({ src: m.dataUrl, label: `Image ${i + 1}` })),
+                  ...(video?.frames ?? []).map((src, i) => ({
+                    src,
+                    label: `Video frame ${i + 1}`,
+                  })),
+                ]}
+                damages={assessment.damages}
+                onAdd={addDamage}
+                onUpdate={updateDamage}
+                onRemove={removeDamage}
+              />
 
               {step === "report" && (
                 <div className="flex justify-end mt-6">
