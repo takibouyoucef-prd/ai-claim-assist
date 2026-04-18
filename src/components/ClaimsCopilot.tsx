@@ -123,6 +123,7 @@ export function ClaimsCopilot() {
     setVideo(null);
     setAssessment(null);
     setDecision(null);
+    setEstimateLines([]);
     setStep("intake");
   };
 
