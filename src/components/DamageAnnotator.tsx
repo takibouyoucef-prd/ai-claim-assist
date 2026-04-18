@@ -192,6 +192,17 @@ export function DamageAnnotator({ previews, damages, onAdd, onUpdate, onRemove }
               >
                 {d.severity}
               </Badge>
+              <div className="flex items-center">
+                <span className="text-xs text-muted-foreground mr-1">$</span>
+                <Input
+                  type="number"
+                  value={d.cost ?? 0}
+                  onChange={(e) =>
+                    onUpdate(i, { cost: Number(e.target.value) || 0 })
+                  }
+                  className="w-24 h-8 text-right font-mono text-xs"
+                />
+              </div>
               <button
                 onClick={() => {
                   setActiveImage(d.imageIndex ?? 0);
