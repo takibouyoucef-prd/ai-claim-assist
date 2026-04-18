@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { DamageAnnotator } from "./DamageAnnotator";
+import { ExplainChat } from "./ExplainChat";
 
 type Step = "start" | "intake" | "upload" | "processing" | "report" | "estimate" | "review" | "done";
 
@@ -800,6 +801,20 @@ export function ClaimsCopilot() {
           </Card>
         )}
       </main>
+
+      {assessment && step !== "start" && (
+        <ExplainChat
+          context={{
+            claimId,
+            vehicleType,
+            description,
+            step,
+            assessment,
+            estimateLines,
+            decision,
+          }}
+        />
+      )}
     </div>
   );
 }
