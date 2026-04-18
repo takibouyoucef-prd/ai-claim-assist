@@ -666,7 +666,11 @@ export function ClaimsCopilot() {
               const laborTotal = estimateLines
                 .filter((l) => l.category === "Labor")
                 .reduce((s, l) => s + (Number(l.cost) || 0), 0);
-              const total = partsTotal + laborTotal;
+              const damagesTotal = assessment.damages.reduce(
+                (s, d) => s + (Number(d.cost) || 0),
+                0,
+              );
+              const total = partsTotal + laborTotal + damagesTotal;
               return (
                 <Card className="p-6">
                   <h2 className="text-xl font-semibold mb-1">Estimate</h2>
