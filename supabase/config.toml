@@ -1,0 +1,4 @@
+project_id = "lovable"
+
+[functions.assess-claim]
+verify_jwt = false
