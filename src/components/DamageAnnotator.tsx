@@ -295,6 +295,17 @@ export function DamageAnnotator({ previews, damages, onAdd, onUpdate, onRemove }
                   className="mt-1.5"
                 />
               </div>
+              <div>
+                <Label>Estimated cost ($)</Label>
+                <Input
+                  type="number"
+                  value={editing.cost ?? 0}
+                  onChange={(e) =>
+                    onUpdate(editingIdx, { cost: Number(e.target.value) || 0 })
+                  }
+                  className="mt-1.5 font-mono"
+                />
+              </div>
             </div>
           )}
           <DialogFooter className="sm:justify-between">
