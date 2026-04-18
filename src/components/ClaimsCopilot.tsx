@@ -216,10 +216,17 @@ export function ClaimsCopilot() {
       // Auto-assign default marker positions to AI-detected damages so they
       // immediately appear on the preview panel and can be repositioned later.
       const totalImages = images.length + (video?.frames.length ?? 0);
+      const rawDamages: Damage[] = data.assessment.damages || [];
+      // Distribute AI total across damages weighted by severity, so each
+      // damage has an editable cost the agent can tune.
+      const weight = (s: string) => (s === "High" ? 3 : s === "Medium" ? 2 : 1);
+      const totalWeight = rawDamages.reduce((sum, d) => sum + weight(d.severity), 0) || 1;
+      const aiTotal = Number(data.assessment.estimatedCost) || 0;
       const annotated: Assessment = {
         ...data.assessment,
-        damages: (data.assessment.damages || []).map((d: Damage, i: number) => ({
+        damages: rawDamages.map((d, i) => ({
           ...d,
+          cost: Math.round((aiTotal * weight(d.severity)) / totalWeight),
           imageIndex: totalImages > 0 ? i % totalImages : 0,
           x: 25 + ((i * 17) % 50),
           y: 25 + ((i * 23) % 50),
