@@ -307,6 +307,7 @@ export function ClaimsCopilot() {
         type: "Dent",
         severity: "Medium",
         description: "Manually added damage",
+        cost: 0,
         imageIndex,
         x,
         y,
