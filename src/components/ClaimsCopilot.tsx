@@ -19,6 +19,7 @@ type Damage = {
   type: string;
   severity: "Low" | "Medium" | "High" | string;
   description: string;
+  cost?: number; // per-damage estimated cost, agent-editable
   imageIndex?: number; // which preview image the marker belongs to
   x?: number; // 0-100 percentage
   y?: number; // 0-100 percentage
@@ -215,10 +216,17 @@ export function ClaimsCopilot() {
       // Auto-assign default marker positions to AI-detected damages so they
       // immediately appear on the preview panel and can be repositioned later.
       const totalImages = images.length + (video?.frames.length ?? 0);
+      const rawDamages: Damage[] = data.assessment.damages || [];
+      // Distribute AI total across damages weighted by severity, so each
+      // damage has an editable cost the agent can tune.
+      const weight = (s: string) => (s === "High" ? 3 : s === "Medium" ? 2 : 1);
+      const totalWeight = rawDamages.reduce((sum, d) => sum + weight(d.severity), 0) || 1;
+      const aiTotal = Number(data.assessment.estimatedCost) || 0;
       const annotated: Assessment = {
         ...data.assessment,
-        damages: (data.assessment.damages || []).map((d: Damage, i: number) => ({
+        damages: rawDamages.map((d, i) => ({
           ...d,
+          cost: Math.round((aiTotal * weight(d.severity)) / totalWeight),
           imageIndex: totalImages > 0 ? i % totalImages : 0,
           x: 25 + ((i * 17) % 50),
           y: 25 + ((i * 23) % 50),
@@ -299,6 +307,7 @@ export function ClaimsCopilot() {
         type: "Dent",
         severity: "Medium",
         description: "Manually added damage",
+        cost: 0,
         imageIndex,
         x,
         y,
@@ -657,7 +666,11 @@ export function ClaimsCopilot() {
               const laborTotal = estimateLines
                 .filter((l) => l.category === "Labor")
                 .reduce((s, l) => s + (Number(l.cost) || 0), 0);
-              const total = partsTotal + laborTotal;
+              const damagesTotal = assessment.damages.reduce(
+                (s, d) => s + (Number(d.cost) || 0),
+                0,
+              );
+              const total = partsTotal + laborTotal + damagesTotal;
               return (
                 <Card className="p-6">
                   <h2 className="text-xl font-semibold mb-1">Estimate</h2>
@@ -721,6 +734,14 @@ export function ClaimsCopilot() {
                     );
                   })}
 
+                  {damagesTotal > 0 && (
+                    <div className="flex items-center justify-between text-sm pb-2 border-b mb-2">
+                      <span className="text-muted-foreground">
+                        Damage markers ({assessment.damages.length}) — edit costs in the Damage Preview above
+                      </span>
+                      <span className="font-mono">${damagesTotal.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="border-t pt-3 flex items-center justify-between">
                     <span className="font-semibold">Total Estimated Cost</span>
                     <span className="font-mono text-lg font-semibold">

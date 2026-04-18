@@ -24,6 +24,7 @@ export type Damage = {
   type: string;
   severity: "Low" | "Medium" | "High" | string;
   description: string;
+  cost?: number;
   imageIndex?: number;
   x?: number;
   y?: number;
@@ -191,6 +192,17 @@ export function DamageAnnotator({ previews, damages, onAdd, onUpdate, onRemove }
               >
                 {d.severity}
               </Badge>
+              <div className="flex items-center">
+                <span className="text-xs text-muted-foreground mr-1">$</span>
+                <Input
+                  type="number"
+                  value={d.cost ?? 0}
+                  onChange={(e) =>
+                    onUpdate(i, { cost: Number(e.target.value) || 0 })
+                  }
+                  className="w-24 h-8 text-right font-mono text-xs"
+                />
+              </div>
               <button
                 onClick={() => {
                   setActiveImage(d.imageIndex ?? 0);
@@ -281,6 +293,17 @@ export function DamageAnnotator({ previews, damages, onAdd, onUpdate, onRemove }
                   }
                   rows={3}
                   className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Estimated cost ($)</Label>
+                <Input
+                  type="number"
+                  value={editing.cost ?? 0}
+                  onChange={(e) =>
+                    onUpdate(editingIdx, { cost: Number(e.target.value) || 0 })
+                  }
+                  className="mt-1.5 font-mono"
                 />
               </div>
             </div>
