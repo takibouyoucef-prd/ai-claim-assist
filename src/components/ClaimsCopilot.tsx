@@ -106,6 +106,11 @@ export function ClaimsCopilot() {
   const [loading, setLoading] = useState(false);
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
+  const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([
+    { label: "Validating media", status: "pending" },
+    { label: "Detecting damage", status: "pending" },
+    { label: "Estimating cost", status: "pending" },
+  ]);
 
   const startClaim = () => {
     setClaimId(generateClaimId());
@@ -159,6 +164,29 @@ export function ClaimsCopilot() {
   const runAssessment = async () => {
     setLoading(true);
     setStep("assessment");
+    const initial: ProcessingStep[] = [
+      { label: "Validating media", status: "active" },
+      { label: "Detecting damage", status: "pending" },
+      { label: "Estimating cost", status: "pending" },
+    ];
+    setProcessingSteps(initial);
+
+    // Animate the checklist while the AI request runs
+    const t1 = setTimeout(() => {
+      setProcessingSteps([
+        { label: "Validating media", status: "done" },
+        { label: "Detecting damage", status: "active" },
+        { label: "Estimating cost", status: "pending" },
+      ]);
+    }, 900);
+    const t2 = setTimeout(() => {
+      setProcessingSteps([
+        { label: "Validating media", status: "done" },
+        { label: "Detecting damage", status: "done" },
+        { label: "Estimating cost", status: "active" },
+      ]);
+    }, 2200);
+
     try {
       const allImages = [
         ...images.map((m) => m.dataUrl),
@@ -169,12 +197,21 @@ export function ClaimsCopilot() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      setProcessingSteps([
+        { label: "Validating media", status: "done" },
+        { label: "Detecting damage", status: "done" },
+        { label: "Estimating cost", status: "done" },
+      ]);
+      // Brief pause so the user sees all steps complete
+      await new Promise((r) => setTimeout(r, 400));
       setAssessment(data.assessment);
       setStep("estimate");
     } catch (e: any) {
       toast.error(e.message || "Assessment failed");
       setStep("upload");
     } finally {
+      clearTimeout(t1);
+      clearTimeout(t2);
       setLoading(false);
     }
   };
