@@ -24,6 +24,7 @@ export type Damage = {
   type: string;
   severity: "Low" | "Medium" | "High" | string;
   description: string;
+  cost?: number;
   imageIndex?: number;
   x?: number;
   y?: number;
