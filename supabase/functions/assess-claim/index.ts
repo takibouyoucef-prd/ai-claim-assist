@@ -19,16 +19,18 @@ serve(async (req) => {
         text: `You are an insurance claims assessor. Analyze this claim and respond ONLY with valid JSON (no markdown, no code fences) matching this schema:
 {
   "summary": "string - 2-3 sentence damage assessment",
-  "damages": [{"part": "string", "severity": "Minor|Moderate|Severe", "description": "string"}],
+  "damages": [{"location": "string (e.g. Front bumper, Driver door)", "type": "Dent|Scratch|Broken Part|Crack|Paint Damage|Other", "severity": "Low|Medium|High", "description": "string"}],
   "estimatedCost": number (USD total),
   "lineItems": [{"item": "string", "cost": number}],
+  "mediaValidation": {"status": "Sufficient coverage|Missing angle|Insufficient", "notes": "string - 1 sentence on what's covered or missing"},
+  "fraudRisk": {"level": "Low|Medium|High", "reason": "string - brief reason"},
   "recommendation": "Approve|Review|Deny",
   "confidence": number (0-100)
 }
 
 Vehicle: ${vehicleType}
 Incident: ${description}
-${images?.length ? `Analyze the ${images.length} attached image(s).` : "No images provided."}`,
+${images?.length ? `Analyze the ${images.length} attached image(s) for damage location, type, severity, and angle coverage.` : "No images provided — note this in mediaValidation."}`,
       },
       ...(images || []).map((url: string) => ({
         type: "image_url",
