@@ -317,10 +317,51 @@ export function ClaimsCopilot() {
     });
   };
 
-  const finalize = (choice: "approved" | "rejected") => {
+  const finalize = (choice: "approved" | "rejected" | "escalated") => {
     setDecision(choice);
     setStep("done");
-    toast.success(`Claim ${choice}`);
+    toast.success(
+      choice === "approved"
+        ? "Claim approved"
+        : choice === "escalated"
+          ? "Claim escalated for senior review"
+          : "Claim rejected",
+    );
+  };
+
+  // Compute recommended next steps based on the current claim state.
+  const getNextSteps = (): { label: string; tone: "default" | "warn" | "danger" | "good" }[] => {
+    const steps: { label: string; tone: "default" | "warn" | "danger" | "good" }[] = [];
+    if (!assessment) return steps;
+    if (assessment.fraudRisk.level === "High") {
+      steps.push({ label: "Potential fraud — escalate to SIU before approving", tone: "danger" });
+    } else if (assessment.fraudRisk.level === "Medium") {
+      steps.push({ label: "Medium fraud risk — verify policy details and incident report", tone: "warn" });
+    }
+    if (assessment.confidence < 70) {
+      steps.push({
+        label: `Low AI confidence (${assessment.confidence}%) — escalate or request manual inspection`,
+        tone: "warn",
+      });
+    }
+    if (assessment.mediaValidation.status !== "Sufficient coverage") {
+      steps.push({ label: "Request additional images of missing angles", tone: "warn" });
+    }
+    if (assessment.damages.some((d) => d.severity === "High")) {
+      steps.push({ label: "High-severity damage detected — confirm parts availability", tone: "default" });
+    }
+    if (step === "report") {
+      steps.push({ label: "Generate the cost estimate to continue", tone: "default" });
+    }
+    if (step === "estimate" || step === "review") {
+      if (assessment.fraudRisk.level !== "High" && assessment.confidence >= 70) {
+        steps.push({ label: "Approve estimate and finalize claim", tone: "good" });
+      }
+    }
+    if (steps.length === 0) {
+      steps.push({ label: "All checks look clean — proceed to approval", tone: "good" });
+    }
+    return steps;
   };
 
   return (
