@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-type Step = "start" | "intake" | "upload" | "assessment" | "estimate" | "review" | "done";
+type Step = "start" | "intake" | "upload" | "processing" | "report" | "estimate" | "review" | "done";
+
+type EstimateLine = { item: string; category: "Parts" | "Labor"; cost: number };
 
 type Damage = {
   location: string;
@@ -111,6 +113,7 @@ export function ClaimsCopilot() {
     { label: "Detecting damage", status: "pending" },
     { label: "Estimating cost", status: "pending" },
   ]);
+  const [estimateLines, setEstimateLines] = useState<EstimateLine[]>([]);
 
   const startClaim = () => {
     setClaimId(generateClaimId());
@@ -120,6 +123,7 @@ export function ClaimsCopilot() {
     setVideo(null);
     setAssessment(null);
     setDecision(null);
+    setEstimateLines([]);
     setStep("intake");
   };
 
@@ -163,7 +167,7 @@ export function ClaimsCopilot() {
 
   const runAssessment = async () => {
     setLoading(true);
-    setStep("assessment");
+    setStep("processing");
     const initial: ProcessingStep[] = [
       { label: "Validating media", status: "active" },
       { label: "Detecting damage", status: "pending" },
@@ -205,7 +209,7 @@ export function ClaimsCopilot() {
       // Brief pause so the user sees all steps complete
       await new Promise((r) => setTimeout(r, 400));
       setAssessment(data.assessment);
-      setStep("estimate");
+      setStep("report");
     } catch (e: any) {
       toast.error(e.message || "Assessment failed");
       setStep("upload");
@@ -214,6 +218,47 @@ export function ClaimsCopilot() {
       clearTimeout(t2);
       setLoading(false);
     }
+  };
+
+  const generateEstimate = () => {
+    if (!assessment) return;
+    // Categorize AI line items into Parts vs Labor heuristically.
+    const partsKeywords = /(part|panel|bumper|fender|hood|door|glass|light|mirror|paint|trim|grille|wheel|tire|sensor|airbag|radiator)/i;
+    const labor: EstimateLine[] = [];
+    const parts: EstimateLine[] = [];
+    assessment.lineItems.forEach((li) => {
+      const isLabor = /labor|labour|hours?|install|repair time|paint(ing)? labor/i.test(li.item);
+      const isPart = partsKeywords.test(li.item);
+      if (isLabor && !isPart) {
+        labor.push({ item: li.item, category: "Labor", cost: li.cost });
+      } else if (isPart) {
+        parts.push({ item: li.item, category: "Parts", cost: li.cost });
+      } else {
+        // Default unknown items to Parts; include a small labor bucket if missing
+        parts.push({ item: li.item, category: "Parts", cost: li.cost });
+      }
+    });
+    if (labor.length === 0) {
+      // Add a default labor line so the agent can edit it
+      const partsTotal = parts.reduce((s, l) => s + l.cost, 0);
+      labor.push({ item: "Repair labor", category: "Labor", cost: Math.round(partsTotal * 0.35) });
+    }
+    setEstimateLines([...parts, ...labor]);
+    setStep("estimate");
+  };
+
+  const updateLine = (idx: number, patch: Partial<EstimateLine>) => {
+    setEstimateLines((prev) =>
+      prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)),
+    );
+  };
+
+  const removeLine = (idx: number) => {
+    setEstimateLines((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const addLine = (category: "Parts" | "Labor") => {
+    setEstimateLines((prev) => [...prev, { item: "New item", category, cost: 0 }]);
   };
 
   const finalize = (choice: "approved" | "rejected") => {
@@ -432,7 +477,7 @@ export function ClaimsCopilot() {
           </Card>
         )}
 
-        {step === "assessment" && loading && (
+        {step === "processing" && loading && (
           <Card className="p-8">
             <h2 className="text-xl font-semibold mb-1">AI Processing</h2>
             <p className="text-sm text-muted-foreground mb-6">
@@ -478,19 +523,19 @@ export function ClaimsCopilot() {
           </Card>
         )}
 
-        {(step === "estimate" || step === "review") && assessment && (
+        {(step === "report" || step === "estimate" || step === "review") && assessment && (
           <div className="space-y-4">
+            {/* Damage Report card — always visible from report step onward */}
             <Card className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h2 className="text-xl font-semibold">AI Assessment</h2>
-                  <p className="text-sm text-muted-foreground">Step 3 of 5</p>
+                  <p className="text-sm text-muted-foreground">Step 3 of 5 — Damage report</p>
                 </div>
                 <Badge variant="outline">Confidence: {assessment.confidence}%</Badge>
               </div>
               <p className="text-sm leading-relaxed">{assessment.summary}</p>
 
-              {/* AI signal cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
                 <div className="rounded border p-3">
                   <div className="text-xs text-muted-foreground mb-1">Media Validation</div>
@@ -559,51 +604,123 @@ export function ClaimsCopilot() {
                   </div>
                 ))}
               </div>
+
+              {step === "report" && (
+                <div className="flex justify-end mt-6">
+                  <Button onClick={generateEstimate}>Generate Estimate</Button>
+                </div>
+              )}
             </Card>
 
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-1">Estimate</h2>
-              <p className="text-sm text-muted-foreground mb-4">Step 4 of 5</p>
-              <table className="w-full text-sm">
-                <tbody>
-                  {assessment.lineItems.map((li, i) => (
-                    <tr key={i} className="border-b last:border-0">
-                      <td className="py-2">{li.item}</td>
-                      <td className="py-2 text-right font-mono">${li.cost.toLocaleString()}</td>
-                    </tr>
-                  ))}
-                  <tr className="font-semibold">
-                    <td className="py-3">Total Estimate</td>
-                    <td className="py-3 text-right font-mono">
-                      ${assessment.estimatedCost.toLocaleString()}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <div className="mt-4 text-sm">
-                <span className="text-muted-foreground">AI Recommendation: </span>
-                <Badge variant="outline">{assessment.recommendation}</Badge>
-              </div>
-            </Card>
+            {/* Editable Estimate card — only after Generate Estimate is clicked */}
+            {(step === "estimate" || step === "review") && (() => {
+              const partsTotal = estimateLines
+                .filter((l) => l.category === "Parts")
+                .reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const laborTotal = estimateLines
+                .filter((l) => l.category === "Labor")
+                .reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const total = partsTotal + laborTotal;
+              return (
+                <Card className="p-6">
+                  <h2 className="text-xl font-semibold mb-1">Estimate</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Step 4 of 5 — Review and edit the cost breakdown
+                  </p>
 
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-1">Review & Approve</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Step 5 of 5 — Your decision finalizes the claim
-              </p>
-              <div className="flex gap-3">
-                <Button onClick={() => finalize("approved")} className="flex-1">
-                  Approve Claim
-                </Button>
-                <Button
-                  onClick={() => finalize("rejected")}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Reject
-                </Button>
-              </div>
-            </Card>
+                  {(["Parts", "Labor"] as const).map((cat) => {
+                    const lines = estimateLines
+                      .map((l, i) => ({ l, i }))
+                      .filter(({ l }) => l.category === cat);
+                    const subtotal = lines.reduce((s, { l }) => s + (Number(l.cost) || 0), 0);
+                    return (
+                      <div key={cat} className="mb-5">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-medium text-sm">{cat}</h3>
+                          <button
+                            onClick={() => addLine(cat)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            + Add line
+                          </button>
+                        </div>
+                        {lines.length === 0 && (
+                          <p className="text-xs text-muted-foreground italic">No {cat.toLowerCase()} items.</p>
+                        )}
+                        <div className="space-y-2">
+                          {lines.map(({ l, i }) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <Input
+                                value={l.item}
+                                onChange={(e) => updateLine(i, { item: e.target.value })}
+                                className="flex-1"
+                              />
+                              <div className="flex items-center">
+                                <span className="text-sm text-muted-foreground mr-1">$</span>
+                                <Input
+                                  type="number"
+                                  value={l.cost}
+                                  onChange={(e) =>
+                                    updateLine(i, { cost: Number(e.target.value) || 0 })
+                                  }
+                                  className="w-28 text-right font-mono"
+                                />
+                              </div>
+                              <button
+                                onClick={() => removeLine(i)}
+                                className="text-muted-foreground hover:text-destructive text-sm px-2"
+                                aria-label="Remove line"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="text-xs text-muted-foreground text-right mt-2">
+                          {cat} subtotal:{" "}
+                          <span className="font-mono">${subtotal.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div className="border-t pt-3 flex items-center justify-between">
+                    <span className="font-semibold">Total Estimated Cost</span>
+                    <span className="font-mono text-lg font-semibold">
+                      ${total.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    AI suggested ${assessment.estimatedCost.toLocaleString()} ·
+                    Recommendation:{" "}
+                    <Badge variant="outline" className="ml-1">
+                      {assessment.recommendation}
+                    </Badge>
+                  </div>
+                </Card>
+              );
+            })()}
+
+            {(step === "estimate" || step === "review") && (
+              <Card className="p-6">
+                <h2 className="text-xl font-semibold mb-1">Review & Approve</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Step 5 of 5 — Your decision finalizes the claim
+                </p>
+                <div className="flex gap-3">
+                  <Button onClick={() => finalize("approved")} className="flex-1">
+                    Approve Claim
+                  </Button>
+                  <Button
+                    onClick={() => finalize("rejected")}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </Card>
+            )}
           </div>
         )}
 
@@ -637,17 +754,22 @@ function Stepper({ step }: { step: Step }) {
     { key: "estimate", label: "Estimate" },
     { key: "review", label: "Review" },
   ];
-  const activeIndex = steps.findIndex((s) =>
-    s.key === step || (step === "estimate" && s.key === "assessment") || (step === "done" && true),
-  );
+  // Map current step to a stepper index
+  const stepIndexMap: Record<string, number> = {
+    intake: 0,
+    upload: 1,
+    processing: 2,
+    report: 2,
+    estimate: 3,
+    review: 4,
+    done: 4,
+  };
+  const activeIndex = stepIndexMap[step] ?? 0;
   return (
     <div className="mx-auto max-w-4xl px-6 pb-3 flex gap-2 text-xs">
       {steps.map((s, i) => {
-        const current = s.key === step || (step === "estimate" && s.key === "estimate");
-        const done =
-          step === "done" ||
-          steps.findIndex((x) => x.key === step) > i ||
-          (step === "estimate" && i < 3);
+        const current = i === activeIndex;
+        const done = i < activeIndex || step === "done";
         return (
           <div key={s.key} className="flex items-center gap-2 flex-1">
             <div
