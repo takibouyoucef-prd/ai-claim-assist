@@ -11,16 +11,25 @@ import { supabase } from "@/integrations/supabase/client";
 
 type Step = "start" | "intake" | "upload" | "assessment" | "estimate" | "review" | "done";
 
-type Damage = { part: string; severity: string; description: string };
+type Damage = {
+  location: string;
+  type: string;
+  severity: "Low" | "Medium" | "High" | string;
+  description: string;
+};
 type LineItem = { item: string; cost: number };
 type Assessment = {
   summary: string;
   damages: Damage[];
   estimatedCost: number;
   lineItems: LineItem[];
+  mediaValidation: { status: string; notes: string };
+  fraudRisk: { level: "Low" | "Medium" | "High" | string; reason: string };
   recommendation: string;
   confidence: number;
 };
+
+type ProcessingStep = { label: string; status: "pending" | "active" | "done" };
 
 type ImageFile = { name: string; dataUrl: string };
 type VideoFile = { name: string; dataUrl: string; frames: string[] };
