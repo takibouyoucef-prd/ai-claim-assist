@@ -734,6 +734,14 @@ export function ClaimsCopilot() {
                     );
                   })}
 
+                  {damagesTotal > 0 && (
+                    <div className="flex items-center justify-between text-sm pb-2 border-b mb-2">
+                      <span className="text-muted-foreground">
+                        Damage markers ({assessment.damages.length}) — edit costs in the Damage Preview above
+                      </span>
+                      <span className="font-mono">${damagesTotal.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="border-t pt-3 flex items-center justify-between">
                     <span className="font-semibold">Total Estimated Cost</span>
                     <span className="font-mono text-lg font-semibold">
