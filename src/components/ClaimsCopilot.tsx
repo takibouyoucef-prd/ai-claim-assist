@@ -113,7 +113,7 @@ export function ClaimsCopilot() {
   const [extracting, setExtracting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [assessment, setAssessment] = useState<Assessment | null>(null);
-  const [decision, setDecision] = useState<"approved" | "rejected" | "escalated" | null>(null);
+  const [decision, setDecision] = useState<"approved" | "rejected" | "pending_review" | null>(null);
   const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([
     { label: "Validating media", status: "pending" },
     { label: "Detecting damage", status: "pending" },
@@ -317,14 +317,14 @@ export function ClaimsCopilot() {
     });
   };
 
-  const finalize = (choice: "approved" | "rejected" | "escalated") => {
+  const finalize = (choice: "approved" | "rejected" | "pending_review") => {
     setDecision(choice);
     setStep("done");
     toast.success(
       choice === "approved"
         ? "Claim approved"
-        : choice === "escalated"
-          ? "Claim escalated for senior review"
+        : choice === "pending_review"
+          ? "Claim sent for senior review"
           : "Claim rejected",
     );
   };
@@ -850,20 +850,20 @@ export function ClaimsCopilot() {
 
             {(step === "estimate" || step === "review") && (
               <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-1">Review & Approve</h2>
+                <h2 className="text-xl font-semibold mb-1">Final Decision</h2>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Step 5 of 6 — Approve, escalate, or reject the claim
+                  Step 5 of 6 — Approve the claim or send it for senior review
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button onClick={() => finalize("approved")} className="flex-1">
                     Approve Claim
                   </Button>
                   <Button
-                    onClick={() => finalize("escalated")}
+                    onClick={() => finalize("pending_review")}
                     variant="secondary"
                     className="flex-1"
                   >
-                    Escalate
+                    Send for Review
                   </Button>
                   <Button
                     onClick={() => finalize("rejected")}
@@ -879,31 +879,137 @@ export function ClaimsCopilot() {
         )}
 
         {step === "done" && (
-          <Card className="p-12 text-center">
-            <div className="text-4xl mb-3">
-              {decision === "approved" ? "✓" : decision === "escalated" ? "⚑" : "✕"}
+          <div className="space-y-4">
+            <Card className="p-8 text-center">
+              <div className="text-4xl mb-3">
+                {decision === "approved" ? "✓" : decision === "pending_review" ? "⌛" : "✕"}
+              </div>
+              <h2 className="text-2xl font-semibold mb-2">
+                Claim{" "}
+                {decision === "approved"
+                  ? "Approved"
+                  : decision === "pending_review"
+                    ? "Pending Review"
+                    : "Rejected"}
+              </h2>
+              <p className="text-muted-foreground font-mono text-sm">{claimId}</p>
+              {decision === "pending_review" && (
+                <p className="text-muted-foreground mt-2 text-sm">
+                  Forwarded to a senior adjuster for manual review.
+                </p>
+              )}
+            </Card>
+
+            {assessment && (
+              <Card className="p-6">
+                <h2 className="text-xl font-semibold mb-4">Final Summary</h2>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                  <div className="rounded border p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Vehicle</div>
+                    <div className="font-medium">{vehicleType}</div>
+                  </div>
+                  <div className="rounded border p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Decision</div>
+                    <Badge
+                      variant={
+                        decision === "approved"
+                          ? "default"
+                          : decision === "pending_review"
+                            ? "secondary"
+                            : "destructive"
+                      }
+                    >
+                      {decision === "approved"
+                        ? "Approved"
+                        : decision === "pending_review"
+                          ? "Pending Review"
+                          : "Rejected"}
+                    </Badge>
+                  </div>
+                  <div className="rounded border p-3">
+                    <div className="text-xs text-muted-foreground mb-1">AI Confidence</div>
+                    <div className="font-medium">{assessment.confidence}%</div>
+                  </div>
+                </div>
+
+                <h3 className="font-medium text-sm mb-2">Final Damage Report</h3>
+                {assessment.damages.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic mb-4">No damages recorded.</p>
+                ) : (
+                  <div className="space-y-1.5 mb-6">
+                    {assessment.damages.map((d, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between text-sm p-2 rounded border"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">{d.location}</div>
+                          <div className="text-xs text-muted-foreground">{d.type}</div>
+                        </div>
+                        <Badge
+                          variant={
+                            d.severity === "High"
+                              ? "destructive"
+                              : d.severity === "Medium"
+                                ? "default"
+                                : "secondary"
+                          }
+                          className="mr-3"
+                        >
+                          {d.severity}
+                        </Badge>
+                        <span className="font-mono text-sm w-24 text-right">
+                          ${(d.cost ?? 0).toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <h3 className="font-medium text-sm mb-2">Final Cost Estimate</h3>
+                {(() => {
+                  const partsTotal = estimateLines
+                    .filter((l) => l.category === "Parts")
+                    .reduce((s, l) => s + (Number(l.cost) || 0), 0);
+                  const laborTotal = estimateLines
+                    .filter((l) => l.category === "Labor")
+                    .reduce((s, l) => s + (Number(l.cost) || 0), 0);
+                  const damagesTotal = assessment.damages.reduce(
+                    (s, d) => s + (Number(d.cost) || 0),
+                    0,
+                  );
+                  const total = partsTotal + laborTotal + damagesTotal;
+                  return (
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Parts</span>
+                        <span className="font-mono">${partsTotal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Labor</span>
+                        <span className="font-mono">${laborTotal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Damage markers</span>
+                        <span className="font-mono">${damagesTotal.toLocaleString()}</span>
+                      </div>
+                      <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
+                        <span>
+                          {decision === "approved" ? "Approved Payout" : "Total Estimate"}
+                        </span>
+                        <span className="font-mono text-lg">${total.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </Card>
+            )}
+
+            <div className="flex justify-center">
+              <Button onClick={startClaim}>Create Another Claim</Button>
             </div>
-            <h2 className="text-2xl font-semibold mb-2">
-              Claim{" "}
-              {decision === "approved"
-                ? "Approved"
-                : decision === "escalated"
-                  ? "Escalated"
-                  : "Rejected"}
-            </h2>
-            <p className="text-muted-foreground mb-1 font-mono text-sm">{claimId}</p>
-            {decision === "approved" && assessment && (
-              <p className="text-muted-foreground">
-                Payout: ${assessment.estimatedCost.toLocaleString()}
-              </p>
-            )}
-            {decision === "escalated" && (
-              <p className="text-muted-foreground">Forwarded to senior adjuster for review.</p>
-            )}
-            <Button onClick={startClaim} className="mt-6">
-              Create Another Claim
-            </Button>
-          </Card>
+          </div>
         )}
       </main>
 
@@ -935,17 +1041,17 @@ function Stepper({
   hasMedia: boolean;
   hasAssessment: boolean;
   hasEstimate: boolean;
-  decision: "approved" | "rejected" | "escalated" | null;
+  decision: "approved" | "rejected" | "pending_review" | null;
 }) {
   // 6-stage workflow. The final stage label changes based on the agent's decision.
   const finalLabel =
     decision === "approved"
       ? "Approved"
-      : decision === "escalated"
-        ? "Escalated"
+      : decision === "pending_review"
+        ? "Pending Review"
         : decision === "rejected"
           ? "Rejected"
-          : "Approved / Escalated";
+          : "Approved / Pending Review";
 
   const stages = [
     { key: "created", label: "Claim Created" },
@@ -992,7 +1098,7 @@ function Stepper({
                   isFinalDone
                     ? decision === "approved"
                       ? "bg-emerald-600 text-white"
-                      : decision === "escalated"
+                      : decision === "pending_review"
                         ? "bg-amber-500 text-white"
                         : "bg-destructive text-destructive-foreground"
                     : done
