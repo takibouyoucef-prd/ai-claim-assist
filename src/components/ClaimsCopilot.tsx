@@ -275,6 +275,8 @@ export function ClaimsCopilot() {
     };
 
     setClaimId(generateClaimId());
+    setClient({ name: "Sarah Mitchell", email: "sarah.mitchell@example.com", phone: "(415) 555-0142" });
+    setPolicy({ number: "POL-4827-K9XQ", type: "Comprehensive", deductible: 500 });
     setVehicleType("Sedan");
     setDescription(
       "Rear-ended at low speed in a parking lot, then pushed into a concrete barrier causing front-end damage. Driver and passenger uninjured.",
