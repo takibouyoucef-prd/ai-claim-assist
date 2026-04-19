@@ -893,7 +893,7 @@ export function ClaimsCopilot() {
                   <h2 className="text-xl font-semibold">Damage Validation &amp; Preview</h2>
                   <p className="text-sm text-muted-foreground">Step 2 of 4 — The AI checks the uploaded media for clarity, sufficiency, and integrity, then highlights detected damage for your review.</p>
                 </div>
-                <Badge variant="outline">Confidence: {assessment.confidence}%</Badge>
+                
               </div>
               <p className="text-sm leading-relaxed">{assessment.summary}</p>
 
