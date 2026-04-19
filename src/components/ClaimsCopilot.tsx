@@ -128,6 +128,28 @@ export function ClaimsCopilot() {
   const [estimateDamages, setEstimateDamages] = useState<Damage[]>([]);
   // Whether the agent has chosen to manually edit AI-recommended repair costs.
   const [manualRepairEdit, setManualRepairEdit] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+
+  const addFromCatalog = (it: CatalogItem) => {
+    if (it.category === "Damage") {
+      setEstimateDamages((prev) => [
+        ...prev,
+        {
+          location: it.name,
+          type: "Other",
+          severity: "Medium",
+          description: it.note ?? "Added from catalog",
+          cost: it.cost,
+        },
+      ]);
+    } else {
+      setEstimateLines((prev) => [
+        ...prev,
+        { item: it.name, category: it.category, cost: it.cost },
+      ]);
+    }
+    toast.success(`Added "${it.name}" — $${it.cost.toLocaleString()}`);
+  };
   // Simulated claims-adjuster outcome on the Final Overview screen.
   const [adjusterDecision, setAdjusterDecision] = useState<"approved" | "rejected" | null>(null);
   const [repairRequestId, setRepairRequestId] = useState<string | null>(null);
