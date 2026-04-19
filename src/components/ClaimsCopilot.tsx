@@ -142,7 +142,8 @@ export function ClaimsCopilot() {
   const [claimId, setClaimId] = useState("");
   const [client, setClient] = useState<{ name: string; email: string; phone: string } | null>(null);
   const [policy, setPolicy] = useState<{ number: string; type: string; deductible: number } | null>(null);
-  const [vehicleType, setVehicleType] = useState("");
+  const [vehicle, setVehicle] = useState<{ type: string; makeModel: string; year: number; vin: string } | null>(null);
+  const vehicleType = vehicle?.type ?? "";
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<ImageFile[]>([]);
   const [video, setVideo] = useState<VideoFile | null>(null);
