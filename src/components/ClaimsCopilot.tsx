@@ -678,10 +678,11 @@ export function ClaimsCopilot() {
           </Card>
         )}
 
+        {step === "processing" && loading && (
           <Card className="p-8">
             <h2 className="text-xl font-semibold mb-1">AI Processing</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Step 3 of 5 — Running automated analysis on your media
+              Step 2 of 4 — Running automated analysis on your media
             </p>
             <ul className="space-y-3">
               {processingSteps.map((s, i) => (
