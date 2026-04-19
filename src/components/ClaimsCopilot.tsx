@@ -151,6 +151,18 @@ export function ClaimsCopilot() {
     }
     toast.success(`Added "${it.name}" — $${it.cost.toLocaleString()}`);
   };
+
+  // ⌘K / Ctrl+K opens the catalog while on the estimate step
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCatalogOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   // Simulated claims-adjuster outcome on the Final Overview screen.
   const [adjusterDecision, setAdjusterDecision] = useState<"approved" | "rejected" | null>(null);
   const [repairRequestId, setRepairRequestId] = useState<string | null>(null);
