@@ -1051,33 +1051,24 @@ export function ClaimsCopilot() {
               </ul>
             </Card>
 
-            {(step === "estimate" || step === "review") && (
-              <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-1">Final Decision</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Step 5 of 6 — Approve the claim or send it for senior review
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button onClick={() => finalize("approved")} className="flex-1">
-                    Approve Claim
-                  </Button>
-                  <Button
-                    onClick={() => finalize("pending_review")}
-                    variant="secondary"
-                    className="flex-1"
-                  >
-                    Send for Review
-                  </Button>
-                  <Button
-                    onClick={() => finalize("rejected")}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    Reject
-                  </Button>
-                </div>
-              </Card>
-            )}
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Submit for Final Approval</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Step 5 of 5 — Forward this validated estimate to the claims adjuster for the final decision
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button variant="outline" onClick={() => setStep("report")} className="sm:w-auto">
+                  Back to damage validation
+                </Button>
+                <Button
+                  onClick={() => finalize("pending_review")}
+                  className="flex-1"
+                  size="lg"
+                >
+                  Submit for Final Approval
+                </Button>
+              </div>
+            </Card>
           </div>
         )}
 
