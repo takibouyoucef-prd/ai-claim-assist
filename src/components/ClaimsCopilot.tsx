@@ -232,10 +232,14 @@ export function ClaimsCopilot() {
   const submitIntake = (e: React.FormEvent) => {
     e.preventDefault();
     if (!vehicleType || !description.trim()) {
-      toast.error("Please fill out all fields");
+      toast.error("Please fill out claim details");
       return;
     }
-    setStep("upload");
+    if (images.length === 0 && !video) {
+      toast.error("Please upload at least one photo or video");
+      return;
+    }
+    runAssessment();
   };
 
   const handleImages = async (files: FileList | null) => {
@@ -333,7 +337,7 @@ export function ClaimsCopilot() {
       setStep("report");
     } catch (e: any) {
       toast.error(e.message || "Assessment failed");
-      setStep("upload");
+      setStep("intake");
     } finally {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -510,8 +514,8 @@ export function ClaimsCopilot() {
 
         {step === "intake" && (
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-1">Claim Intake</h2>
-            <p className="text-sm text-muted-foreground mb-6">Step 1 of 5 — Basic information</p>
+            <h2 className="text-xl font-semibold mb-1">Create Claim</h2>
+            <p className="text-sm text-muted-foreground mb-6">Step 1 of 4 — Claim details and damage media</p>
             <form onSubmit={submitIntake} className="space-y-4">
               <div>
                 <Label>Claim ID</Label>
@@ -540,150 +544,137 @@ export function ClaimsCopilot() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe what happened..."
-                  rows={5}
+                  rows={4}
                   className="mt-1.5"
                 />
               </div>
-              <div className="flex justify-end">
-                <Button type="submit">Continue</Button>
-              </div>
-            </form>
-          </Card>
-        )}
 
-        {step === "upload" && (
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-1">Upload Media</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Step 2 of 5 — Add damage photos and (optionally) one video
-            </p>
+              <div className="border-t pt-5">
+                <h3 className="font-medium mb-1">Damage Media</h3>
+                <p className="text-sm text-muted-foreground mb-4">Add damage photos and (optionally) one video</p>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* Images uploader */}
-              <div>
-                <Label className="mb-1.5 block">Images</Label>
-                <label className="block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => handleImages(e.target.files)}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Click to select images (multiple allowed)
-                  </p>
-                </label>
-              </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="mb-1.5 block">Images</Label>
+                    <label className="block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => handleImages(e.target.files)}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Click to select images (multiple allowed)
+                      </p>
+                    </label>
+                  </div>
 
-              {/* Video uploader */}
-              <div>
-                <Label className="mb-1.5 block">Video (optional)</Label>
-                <label className="block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50">
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={(e) => handleVideo(e.target.files)}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    {extracting ? "Extracting key frames..." : "Click to select one video file"}
-                  </p>
-                </label>
-              </div>
-            </div>
-
-            {(images.length > 0 || video) && (
-              <div className="mt-6 space-y-5">
-                <div className="flex items-center gap-2">
-                  <Badge>Media Uploaded</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {images.length} image{images.length === 1 ? "" : "s"}
-                    {video ? ` · 1 video (${video.frames.length} key frames)` : ""}
-                  </span>
+                  <div>
+                    <Label className="mb-1.5 block">Video (optional)</Label>
+                    <label className="block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50">
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => handleVideo(e.target.files)}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        {extracting ? "Extracting key frames..." : "Click to select one video file"}
+                      </p>
+                    </label>
+                  </div>
                 </div>
 
-                {images.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Images</h3>
-                    <div className="grid grid-cols-4 gap-3">
-                      {images.map((m, i) => (
-                        <div
-                          key={i}
-                          className="relative aspect-square rounded-md overflow-hidden bg-muted"
-                        >
-                          <img
-                            src={m.dataUrl}
-                            alt={m.name}
-                            className="w-full h-full object-cover"
-                          />
+                {(images.length > 0 || video) && (
+                  <div className="mt-5 space-y-5">
+                    <div className="flex items-center gap-2">
+                      <Badge>Media Uploaded</Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {images.length} image{images.length === 1 ? "" : "s"}
+                        {video ? ` · 1 video (${video.frames.length} key frames)` : ""}
+                      </span>
+                    </div>
+
+                    {images.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Images</h4>
+                        <div className="grid grid-cols-4 gap-3">
+                          {images.map((m, i) => (
+                            <div
+                              key={i}
+                              className="relative aspect-square rounded-md overflow-hidden bg-muted"
+                            >
+                              <img
+                                src={m.dataUrl}
+                                alt={m.name}
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setImages((prev) => prev.filter((_, idx) => idx !== i))
+                                }
+                                className="absolute top-1 right-1 bg-background/80 rounded px-1.5 text-xs"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {video && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-medium">
+                            Video key frames —{" "}
+                            <span className="text-muted-foreground font-normal">{video.name}</span>
+                          </h4>
                           <button
-                            onClick={() =>
-                              setImages((prev) => prev.filter((_, idx) => idx !== i))
-                            }
-                            className="absolute top-1 right-1 bg-background/80 rounded px-1.5 text-xs"
+                            type="button"
+                            onClick={() => setVideo(null)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
                           >
-                            ✕
+                            Remove video
                           </button>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {video && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-medium">
-                        Video key frames —{" "}
-                        <span className="text-muted-foreground font-normal">{video.name}</span>
-                      </h3>
-                      <button
-                        onClick={() => setVideo(null)}
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        Remove video
-                      </button>
-                    </div>
-                    {video.frames.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-3">
-                        {video.frames.map((src, i) => (
-                          <div
-                            key={i}
-                            className="relative aspect-video rounded-md overflow-hidden bg-muted border"
-                          >
-                            <img
-                              src={src}
-                              alt={`Frame ${i + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                            <span className="absolute bottom-1 left-1 bg-background/80 rounded px-1.5 text-[10px] font-mono">
-                              Frame {i + 1}
-                            </span>
+                        {video.frames.length > 0 ? (
+                          <div className="grid grid-cols-3 gap-3">
+                            {video.frames.map((src, i) => (
+                              <div
+                                key={i}
+                                className="relative aspect-video rounded-md overflow-hidden bg-muted border"
+                              >
+                                <img
+                                  src={src}
+                                  alt={`Frame ${i + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                                <span className="absolute bottom-1 left-1 bg-background/80 rounded px-1.5 text-[10px] font-mono">
+                                  Frame {i + 1}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            Could not extract frames from this video.
+                          </p>
+                        )}
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Could not extract frames from this video.
-                      </p>
                     )}
                   </div>
                 )}
               </div>
-            )}
 
-            <div className="flex justify-between mt-6">
-              <Button variant="outline" onClick={() => setStep("intake")}>
-                Back
-              </Button>
-              <Button
-                onClick={runAssessment}
-                disabled={images.length === 0 && !video}
-              >
-                Run AI Assessment
-              </Button>
-            </div>
+              <div className="flex justify-end pt-2">
+                <Button type="submit" disabled={extracting}>
+                  Run AI Assessment
+                </Button>
+              </div>
+            </form>
           </Card>
         )}
 
@@ -691,7 +682,7 @@ export function ClaimsCopilot() {
           <Card className="p-8">
             <h2 className="text-xl font-semibold mb-1">AI Processing</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Step 3 of 5 — Running automated analysis on your media
+              Step 2 of 4 — Running automated analysis on your media
             </p>
             <ul className="space-y-3">
               {processingSteps.map((s, i) => (
@@ -740,7 +731,7 @@ export function ClaimsCopilot() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h2 className="text-xl font-semibold">Damage Validation &amp; Preview</h2>
-                  <p className="text-sm text-muted-foreground">Step 3 of 5 — Review AI-detected damage and validate media coverage</p>
+                  <p className="text-sm text-muted-foreground">Step 2 of 4 — Review AI-detected damage and validate media coverage</p>
                 </div>
                 <Badge variant="outline">Confidence: {assessment.confidence}%</Badge>
               </div>
@@ -811,7 +802,7 @@ export function ClaimsCopilot() {
                           variant="outline"
                           onClick={() => {
                             if (rec.action === "upload-more") {
-                              setStep("upload");
+                              setStep("intake");
                             } else if (rec.action === "request-photos") {
                               toast.success("Photo request sent to policyholder");
                             } else {
@@ -867,7 +858,7 @@ export function ClaimsCopilot() {
                 <Card className="p-6">
                   <h2 className="text-xl font-semibold mb-1">Cost Estimate Validation</h2>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Step 4 of 5 — Review and edit each damage marker, parts, and labor line
+                    Step 3 of 4 — Review and edit each damage marker, parts, and labor line
                   </p>
 
                   {/* Damage markers as editable line items */}
@@ -1054,7 +1045,7 @@ export function ClaimsCopilot() {
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-1">Submit for Final Approval</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Step 5 of 5 — Forward this validated estimate to the claims adjuster for the final decision
+                Step 4 of 4 — Forward this validated estimate to the claims adjuster for the final decision
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button variant="outline" onClick={() => setStep("report")} className="sm:w-auto">
@@ -1226,10 +1217,9 @@ function Stepper({
   hasEstimate: boolean;
   decision: "approved" | "rejected" | "pending_review" | null;
 }) {
-  // 5-stage workflow.
+  // 4-stage workflow.
   const stages = [
     { key: "created", label: "Create Claim" },
-    { key: "media", label: "Upload Media" },
     { key: "assessed", label: "Review Damage" },
     { key: "estimate", label: "Cost Estimate" },
     { key: "final", label: "Track Claim Status" },
@@ -1238,19 +1228,16 @@ function Stepper({
   // Determine which stage is currently active.
   let activeIndex = 0;
   if (step === "intake") activeIndex = 0;
-  else if (step === "upload") activeIndex = 1;
-  else if (step === "processing") activeIndex = 2;
-  else if (step === "report") activeIndex = 2;
-  else if (step === "estimate" || step === "review") activeIndex = 3;
-  else if (step === "done") activeIndex = 4;
+  else if (step === "processing" || step === "report") activeIndex = 1;
+  else if (step === "estimate" || step === "review") activeIndex = 2;
+  else if (step === "done") activeIndex = 3;
 
   // A stage is done if the workflow has progressed past it.
   const isDone = (i: number) => {
-    if (step === "done" && i < 4) return true;
-    if (i === 0) return step !== "intake";
-    if (i === 1) return hasMedia && (step === "processing" || step === "report" || step === "estimate" || step === "review" || step === "done");
-    if (i === 2) return hasAssessment && (step === "estimate" || step === "review" || step === "done");
-    if (i === 3) return hasEstimate && step === "done";
+    if (step === "done" && i < 3) return true;
+    if (i === 0) return hasMedia && step !== "intake";
+    if (i === 1) return hasAssessment && (step === "estimate" || step === "review" || step === "done");
+    if (i === 2) return hasEstimate && step === "done";
     return false;
   };
 
@@ -1260,7 +1247,7 @@ function Stepper({
         {stages.map((s, i) => {
           const done = isDone(i);
           const current = i === activeIndex && step !== "done";
-          const isFinalDone = i === 4 && step === "done";
+          const isFinalDone = i === 3 && step === "done";
           return (
             <div key={s.key} className="flex items-center gap-2 flex-1 min-w-[120px]">
               <div
