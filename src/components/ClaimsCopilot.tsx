@@ -1148,120 +1148,212 @@ export function ClaimsCopilot() {
 
         {step === "done" && (
           <div className="space-y-4">
-            <Card className="p-8 text-center">
-              <div className="text-4xl mb-3">⌛</div>
-              <h2 className="text-2xl font-semibold mb-2">Final Overview</h2>
-              <p className="text-muted-foreground font-mono text-sm">{claimId}</p>
-              <p className="text-muted-foreground mt-2 text-sm">
-                Submitted to the claims adjuster for final approval.
-              </p>
-            </Card>
+            {(() => {
+              const partsLines = estimateLines.filter((l) => l.category === "Parts");
+              const laborLines = estimateLines.filter((l) => l.category === "Labor");
+              const partsTotal = partsLines.reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const laborTotal = laborLines.reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const damagesTotal = estimateDamages.reduce((s, d) => s + (Number(d.cost) || 0), 0);
+              const total = partsTotal + laborTotal + damagesTotal;
 
-            {assessment && (
-              <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Claim Summary</h2>
+              const simulateAdjuster = (choice: "approved" | "rejected") => {
+                setAdjusterDecision(choice);
+                if (choice === "approved") {
+                  const reqId = `RR-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+                  setRepairRequestId(reqId);
+                  toast.success(`Repair request ${reqId} generated and sent to the repair shop`);
+                } else {
+                  setRepairRequestId(null);
+                  toast.error("Claim rejected by the adjuster");
+                }
+              };
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-                  <div className="rounded border p-3">
-                    <div className="text-xs text-muted-foreground mb-1">Vehicle</div>
-                    <div className="font-medium">{vehicleType}</div>
-                  </div>
-                  <div className="rounded border p-3">
-                    <div className="text-xs text-muted-foreground mb-1">Decision</div>
-                    <Badge
-                      variant={
-                        decision === "approved"
-                          ? "default"
-                          : decision === "pending_review"
-                            ? "secondary"
-                            : "destructive"
-                      }
-                    >
-                      {decision === "approved"
-                        ? "Approved"
-                        : decision === "pending_review"
-                          ? "Pending Review"
-                          : "Rejected"}
-                    </Badge>
-                  </div>
-                  <div className="rounded border p-3">
-                    <div className="text-xs text-muted-foreground mb-1">AI Confidence</div>
-                    <div className="font-medium">{assessment.confidence}%</div>
-                  </div>
-                </div>
+              const isPending = adjusterDecision === null;
+              const headerIcon = adjusterDecision === "approved" ? "✓" : adjusterDecision === "rejected" ? "✕" : "⌛";
+              const headerSub = adjusterDecision === "approved"
+                ? "Approved by the claims adjuster. Repair request generated."
+                : adjusterDecision === "rejected"
+                  ? "Rejected by the claims adjuster."
+                  : "Submitted to the claims adjuster for final approval.";
 
-                <h3 className="font-medium text-sm mb-2">Final Damage Report</h3>
-                {assessment.damages.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic mb-4">No damages recorded.</p>
-                ) : (
-                  <div className="space-y-1.5 mb-6">
-                    {assessment.damages.map((d, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between text-sm p-2 rounded border"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{d.location}</div>
-                          <div className="text-xs text-muted-foreground">{d.type}</div>
+              return (
+                <>
+                  <Card className="p-8 text-center">
+                    <div className="text-4xl mb-3">{headerIcon}</div>
+                    <h2 className="text-2xl font-semibold mb-2">Final Overview</h2>
+                    <p className="text-muted-foreground font-mono text-sm">{claimId}</p>
+                    <p className="text-muted-foreground mt-2 text-sm">{headerSub}</p>
+                    {repairRequestId && (
+                      <div className="mt-4 inline-flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/5 px-3 py-1.5 text-sm">
+                        <span className="text-emerald-600">🛠</span>
+                        <span>Repair request <span className="font-mono font-medium">{repairRequestId}</span> sent to the repair shop</span>
+                      </div>
+                    )}
+                  </Card>
+
+                  {assessment && (
+                    <Card className="p-6">
+                      <h2 className="text-xl font-semibold mb-4">Claim Summary</h2>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                        <div className="rounded border p-3">
+                          <div className="text-xs text-muted-foreground mb-1">Vehicle</div>
+                          <div className="font-medium">{vehicleType}</div>
                         </div>
-                        <Badge
-                          variant={
-                            d.severity === "High"
-                              ? "destructive"
-                              : d.severity === "Medium"
+                        <div className="rounded border p-3">
+                          <div className="text-xs text-muted-foreground mb-1">Adjuster Decision</div>
+                          <Badge
+                            variant={
+                              adjusterDecision === "approved"
                                 ? "default"
-                                : "secondary"
-                          }
-                          className="mr-3"
-                        >
-                          {d.severity}
-                        </Badge>
-                        <span className="font-mono text-sm w-24 text-right">
-                          ${(d.cost ?? 0).toLocaleString()}
-                        </span>
+                                : adjusterDecision === "rejected"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                          >
+                            {adjusterDecision === "approved"
+                              ? "Approved"
+                              : adjusterDecision === "rejected"
+                                ? "Rejected"
+                                : "Pending Review"}
+                          </Badge>
+                        </div>
+                        <div className="rounded border p-3 col-span-2 sm:col-span-1">
+                          <div className="text-xs text-muted-foreground mb-1">Total Estimate</div>
+                          <div className="font-mono font-semibold">${total.toLocaleString()}</div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
 
-                <h3 className="font-medium text-sm mb-2">Final Cost Estimate</h3>
-                {(() => {
-                  const partsTotal = estimateLines
-                    .filter((l) => l.category === "Parts")
-                    .reduce((s, l) => s + (Number(l.cost) || 0), 0);
-                  const laborTotal = estimateLines
-                    .filter((l) => l.category === "Labor")
-                    .reduce((s, l) => s + (Number(l.cost) || 0), 0);
-                  const damagesTotal = assessment.damages.reduce(
-                    (s, d) => s + (Number(d.cost) || 0),
-                    0,
-                  );
-                  const total = partsTotal + laborTotal + damagesTotal;
-                  return (
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Parts</span>
-                        <span className="font-mono">${partsTotal.toLocaleString()}</span>
+                      <h3 className="font-medium text-sm mb-2">Final Damage Report</h3>
+                      {assessment.damages.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic mb-4">No damages recorded.</p>
+                      ) : (
+                        <div className="space-y-1.5 mb-6">
+                          {assessment.damages.map((d, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center justify-between text-sm p-2 rounded border"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium truncate">{d.location}</div>
+                                <div className="text-xs text-muted-foreground">{d.type}</div>
+                              </div>
+                              <Badge
+                                variant={
+                                  d.severity === "High"
+                                    ? "destructive"
+                                    : d.severity === "Medium"
+                                      ? "default"
+                                      : "secondary"
+                                }
+                                className="mr-3"
+                              >
+                                {d.severity}
+                              </Badge>
+                              <span className="font-mono text-sm w-24 text-right">
+                                ${(d.cost ?? 0).toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <h3 className="font-medium text-sm mb-2">Parts &amp; Labor Detail</h3>
+                      {partsLines.length === 0 && laborLines.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic mb-4">No parts or labor lines.</p>
+                      ) : (
+                        <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                          <div className="rounded border p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Parts</span>
+                              <span className="font-mono text-xs">${partsTotal.toLocaleString()}</span>
+                            </div>
+                            {partsLines.length === 0 ? (
+                              <p className="text-xs text-muted-foreground italic">None</p>
+                            ) : (
+                              <ul className="space-y-1 text-xs">
+                                {partsLines.map((l, i) => (
+                                  <li key={i} className="flex justify-between gap-2">
+                                    <span className="truncate">{l.item}</span>
+                                    <span className="font-mono shrink-0">${l.cost.toLocaleString()}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          <div className="rounded border p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Labor</span>
+                              <span className="font-mono text-xs">${laborTotal.toLocaleString()}</span>
+                            </div>
+                            {laborLines.length === 0 ? (
+                              <p className="text-xs text-muted-foreground italic">None</p>
+                            ) : (
+                              <ul className="space-y-1 text-xs">
+                                {laborLines.map((l, i) => (
+                                  <li key={i} className="flex justify-between gap-2">
+                                    <span className="truncate">{l.item}</span>
+                                    <span className="font-mono shrink-0">${l.cost.toLocaleString()}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <h3 className="font-medium text-sm mb-2">Final Cost Estimate</h3>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Damage markers</span>
+                          <span className="font-mono">${damagesTotal.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Parts</span>
+                          <span className="font-mono">${partsTotal.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Labor</span>
+                          <span className="font-mono">${laborTotal.toLocaleString()}</span>
+                        </div>
+                        <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
+                          <span>
+                            {adjusterDecision === "approved" ? "Approved Payout" : "Total Estimate"}
+                          </span>
+                          <span className="font-mono text-lg">${total.toLocaleString()}</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Labor</span>
-                        <span className="font-mono">${laborTotal.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Damage markers</span>
-                        <span className="font-mono">${damagesTotal.toLocaleString()}</span>
-                      </div>
-                      <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
-                        <span>
-                          {decision === "approved" ? "Approved Payout" : "Total Estimate"}
-                        </span>
-                        <span className="font-mono text-lg">${total.toLocaleString()}</span>
-                      </div>
+                    </Card>
+                  )}
+
+                  {/* Adjuster simulation CTAs */}
+                  <Card className="p-6">
+                    <h3 className="font-semibold mb-1">Claims Adjuster Action</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {isPending
+                        ? "Simulate the claims adjuster's final decision. Approving will generate a repair request to send to the repair shop."
+                        : "Decision recorded. You can revise it below if needed."}
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button
+                        variant={adjusterDecision === "approved" ? "default" : "outline"}
+                        onClick={() => simulateAdjuster("approved")}
+                        className="flex-1"
+                      >
+                        ✓ Simulate adjuster approval
+                      </Button>
+                      <Button
+                        variant={adjusterDecision === "rejected" ? "destructive" : "outline"}
+                        onClick={() => simulateAdjuster("rejected")}
+                        className="flex-1"
+                      >
+                        ✕ Simulate adjuster rejection
+                      </Button>
                     </div>
-                  );
-                })()}
-              </Card>
-            )}
+                  </Card>
+                </>
+              );
+            })()}
 
             <div className="flex justify-center">
               <Button onClick={startClaim}>Create Another Claim</Button>
