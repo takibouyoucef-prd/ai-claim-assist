@@ -227,6 +227,7 @@ export function ClaimsCopilot() {
       { item: "Rear quarter panel touch-up", category: "Parts", cost: 420 },
       { item: "Labor (8 hours)", category: "Labor", cost: 720 },
     ]);
+    setEstimateDamages(demoAssessment.damages.map((d) => ({ ...d })));
     setProcessingSteps([
       { label: "Validating media", status: "done" },
       { label: "Detecting damage", status: "done" },
