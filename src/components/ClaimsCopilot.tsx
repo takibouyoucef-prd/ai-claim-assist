@@ -142,6 +142,8 @@ export function ClaimsCopilot() {
     setEstimateLines([]);
     setEstimateDamages([]);
     setManualRepairEdit(false);
+    setAdjusterDecision(null);
+    setRepairRequestId(null);
     setStep("intake");
   };
 
