@@ -54,6 +54,9 @@ export function DamageAnnotator({ previews, damages, onAdd, onUpdate, onRemove }
   const [activeImage, setActiveImage] = useState(0);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [addMode, setAddMode] = useState(false);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(2);
+  const [pan, setPan] = useState({ x: 50, y: 50 });
   const imgWrapRef = useRef<HTMLDivElement>(null);
 
   if (previews.length === 0) {
