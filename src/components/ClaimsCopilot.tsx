@@ -98,6 +98,27 @@ const extractVideoFrames = (dataUrl: string, count = 3): Promise<string[]> =>
 const generateClaimId = () =>
   `CLM-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
+const DUMMY_CLIENTS = [
+  { name: "Sarah Mitchell", email: "sarah.mitchell@example.com", phone: "(415) 555-0142" },
+  { name: "James O'Connor", email: "james.oconnor@example.com", phone: "(312) 555-0188" },
+  { name: "Priya Raman", email: "priya.raman@example.com", phone: "(206) 555-0173" },
+  { name: "Marcus Bennett", email: "marcus.bennett@example.com", phone: "(617) 555-0119" },
+  { name: "Elena Vasquez", email: "elena.vasquez@example.com", phone: "(305) 555-0166" },
+];
+
+const generateClient = () => DUMMY_CLIENTS[Math.floor(Math.random() * DUMMY_CLIENTS.length)];
+
+const generatePolicyNumber = () =>
+  `POL-${Math.floor(Math.random() * 9000 + 1000)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+const POLICY_TYPES = ["Comprehensive", "Collision", "Full Coverage", "Liability + Collision"];
+
+const generatePolicy = () => ({
+  number: generatePolicyNumber(),
+  type: POLICY_TYPES[Math.floor(Math.random() * POLICY_TYPES.length)],
+  deductible: [250, 500, 750, 1000][Math.floor(Math.random() * 4)],
+});
+
 const fileToDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
     const r = new FileReader();
