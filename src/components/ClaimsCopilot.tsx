@@ -337,7 +337,7 @@ export function ClaimsCopilot() {
       setStep("report");
     } catch (e: any) {
       toast.error(e.message || "Assessment failed");
-      setStep("upload");
+      setStep("intake");
     } finally {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -731,7 +731,7 @@ export function ClaimsCopilot() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h2 className="text-xl font-semibold">Damage Validation &amp; Preview</h2>
-                  <p className="text-sm text-muted-foreground">Step 3 of 5 — Review AI-detected damage and validate media coverage</p>
+                  <p className="text-sm text-muted-foreground">Step 3 of 4 — Review AI-detected damage and validate media coverage</p>
                 </div>
                 <Badge variant="outline">Confidence: {assessment.confidence}%</Badge>
               </div>
@@ -802,7 +802,7 @@ export function ClaimsCopilot() {
                           variant="outline"
                           onClick={() => {
                             if (rec.action === "upload-more") {
-                              setStep("upload");
+                              setStep("intake");
                             } else if (rec.action === "request-photos") {
                               toast.success("Photo request sent to policyholder");
                             } else {
@@ -858,7 +858,7 @@ export function ClaimsCopilot() {
                 <Card className="p-6">
                   <h2 className="text-xl font-semibold mb-1">Cost Estimate Validation</h2>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Step 4 of 5 — Review and edit each damage marker, parts, and labor line
+                    Step 3 of 4 — Review and edit each damage marker, parts, and labor line
                   </p>
 
                   {/* Damage markers as editable line items */}
@@ -1045,7 +1045,7 @@ export function ClaimsCopilot() {
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-1">Submit for Final Approval</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Step 5 of 5 — Forward this validated estimate to the claims adjuster for the final decision
+                Step 4 of 4 — Forward this validated estimate to the claims adjuster for the final decision
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button variant="outline" onClick={() => setStep("report")} className="sm:w-auto">
