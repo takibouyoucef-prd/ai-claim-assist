@@ -339,6 +339,68 @@ export function DamageAnnotator({ previews, damages, onAdd, onUpdate, onRemove }
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Zoom inspector dialog */}
+      <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Inspect image — {current.label}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div
+              className="relative w-full aspect-video overflow-hidden rounded border bg-muted cursor-crosshair"
+              onMouseMove={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setPan({
+                  x: ((e.clientX - rect.left) / rect.width) * 100,
+                  y: ((e.clientY - rect.top) / rect.height) * 100,
+                });
+              }}
+              onWheel={(e) => {
+                e.preventDefault();
+                setZoomLevel((z) => Math.max(1, Math.min(6, z + (e.deltaY > 0 ? -0.25 : 0.25))));
+              }}
+            >
+              <img
+                src={current.src}
+                alt={current.label}
+                draggable={false}
+                className="w-full h-full object-contain pointer-events-none transition-transform duration-100"
+                style={{
+                  transformOrigin: `${pan.x}% ${pan.y}%`,
+                  transform: `scale(${zoomLevel})`,
+                }}
+              />
+              <div className="absolute bottom-2 left-2 bg-background/90 text-xs px-2 py-1 rounded border">
+                Move cursor to pan · scroll to zoom
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Label className="text-xs shrink-0">Zoom</Label>
+              <input
+                type="range"
+                min={1}
+                max={6}
+                step={0.25}
+                value={zoomLevel}
+                onChange={(e) => setZoomLevel(Number(e.target.value))}
+                className="flex-1"
+              />
+              <span className="text-xs font-mono w-12 text-right">{zoomLevel.toFixed(2)}×</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setZoomLevel(2);
+                  setPan({ x: 50, y: 50 });
+                }}
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
