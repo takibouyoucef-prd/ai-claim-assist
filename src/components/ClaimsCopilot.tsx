@@ -733,14 +733,14 @@ export function ClaimsCopilot() {
           </Card>
         )}
 
-        {(step === "report" || step === "estimate" || step === "review") && assessment && (
+        {step === "report" && assessment && (
           <div className="space-y-4">
-            {/* Damage Report card — always visible from report step onward */}
+            {/* Damage Validation & Preview */}
             <Card className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h2 className="text-xl font-semibold">AI Assessment</h2>
-                  <p className="text-sm text-muted-foreground">Step 3 of 5 — Damage report</p>
+                  <h2 className="text-xl font-semibold">Damage Validation &amp; Preview</h2>
+                  <p className="text-sm text-muted-foreground">Step 3 of 5 — Review AI-detected damage and validate media coverage</p>
                 </div>
                 <Badge variant="outline">Confidence: {assessment.confidence}%</Badge>
               </div>
@@ -791,7 +791,43 @@ export function ClaimsCopilot() {
                 </div>
               </div>
 
-              <h3 className="font-medium mt-6 mb-3 text-sm">Damage Preview & Annotations</h3>
+              {/* Unhappy-path media validation: actionable CTAs per recommendation */}
+              {assessment.mediaValidation.status !== "Sufficient coverage" && (
+                <div className="mt-5 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge variant="default" className="bg-amber-500 hover:bg-amber-500">Action needed</Badge>
+                    <h3 className="text-sm font-medium">Media coverage recommendations</h3>
+                  </div>
+                  <ul className="space-y-2">
+                    {[
+                      { label: "Request additional photos from the policyholder", action: "request-photos" },
+                      { label: "Upload more images now", action: "upload-more" },
+                      { label: "Schedule an in-person inspection", action: "schedule-inspection" },
+                    ].map((rec) => (
+                      <li key={rec.action} className="flex items-center justify-between gap-3 text-sm bg-background rounded-md border p-2.5">
+                        <span>{rec.label}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (rec.action === "upload-more") {
+                              setStep("upload");
+                            } else if (rec.action === "request-photos") {
+                              toast.success("Photo request sent to policyholder");
+                            } else {
+                              toast.success("Inspection scheduling request created");
+                            }
+                          }}
+                        >
+                          {rec.action === "upload-more" ? "Upload" : rec.action === "request-photos" ? "Send request" : "Schedule"}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <h3 className="font-medium mt-6 mb-3 text-sm">Damage Preview &amp; Annotations</h3>
               <DamageAnnotator
                 previews={[
                   ...images.map((m, i) => ({ src: m.dataUrl, label: `Image ${i + 1}` })),
@@ -806,15 +842,16 @@ export function ClaimsCopilot() {
                 onRemove={removeDamage}
               />
 
-              {step === "report" && (
-                <div className="flex justify-end mt-6">
-                  <Button onClick={generateEstimate}>Generate Estimate</Button>
-                </div>
-              )}
+              <div className="flex justify-end mt-6">
+                <Button onClick={generateEstimate}>Continue to Cost Estimate</Button>
+              </div>
             </Card>
+          </div>
+        )}
 
-            {/* Editable Estimate card — only after Generate Estimate is clicked */}
-            {(step === "estimate" || step === "review") && (() => {
+        {step === "estimate" && assessment && (
+          <div className="space-y-4">
+            {(() => {
               const partsTotal = estimateLines
                 .filter((l) => l.category === "Parts")
                 .reduce((s, l) => s + (Number(l.cost) || 0), 0);
@@ -828,10 +865,73 @@ export function ClaimsCopilot() {
               const total = partsTotal + laborTotal + damagesTotal;
               return (
                 <Card className="p-6">
-                  <h2 className="text-xl font-semibold mb-1">Estimate</h2>
+                  <h2 className="text-xl font-semibold mb-1">Cost Estimate Validation</h2>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Step 4 of 5 — Review and edit the cost breakdown
+                    Step 4 of 5 — Review and edit each damage marker, parts, and labor line
                   </p>
+
+                  {/* Damage markers as editable line items */}
+                  <div className="mb-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium text-sm">Damage Markers</h3>
+                      <span className="text-xs text-muted-foreground">{assessment.damages.length} item{assessment.damages.length === 1 ? "" : "s"}</span>
+                    </div>
+                    {assessment.damages.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">No damage markers recorded.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {assessment.damages.map((d, i) => (
+                          <div key={i} className="flex items-center gap-2 p-2 rounded border">
+                            <span
+                              className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
+                                d.severity === "High"
+                                  ? "bg-destructive text-destructive-foreground"
+                                  : d.severity === "Medium"
+                                    ? "bg-amber-500 text-white"
+                                    : "bg-emerald-500 text-white"
+                              }`}
+                            >
+                              {i + 1}
+                            </span>
+                            <Input
+                              value={d.location}
+                              onChange={(e) => updateDamage(i, { location: e.target.value })}
+                              className="flex-1 min-w-0"
+                              placeholder="Location"
+                            />
+                            <Badge
+                              variant={
+                                d.severity === "High"
+                                  ? "destructive"
+                                  : d.severity === "Medium"
+                                    ? "default"
+                                    : "secondary"
+                              }
+                              className="hidden sm:inline-flex"
+                            >
+                              {d.severity}
+                            </Badge>
+                            <div className="flex items-center">
+                              <span className="text-sm text-muted-foreground mr-1">$</span>
+                              <Input
+                                type="number"
+                                value={d.cost ?? 0}
+                                onChange={(e) => updateDamage(i, { cost: Number(e.target.value) || 0 })}
+                                className="w-24 text-right font-mono"
+                              />
+                            </div>
+                            <button
+                              onClick={() => removeDamage(i)}
+                              className="text-muted-foreground hover:text-destructive text-sm px-2"
+                              aria-label="Remove damage"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {(["Parts", "Labor"] as const).map((cat) => {
                     const lines = estimateLines
@@ -891,9 +991,7 @@ export function ClaimsCopilot() {
 
                   {damagesTotal > 0 && (
                     <div className="flex items-center justify-between text-sm pb-2 border-b mb-2">
-                      <span className="text-muted-foreground">
-                        Damage markers ({assessment.damages.length}) — edit costs in the Damage Preview above
-                      </span>
+                      <span className="text-muted-foreground">Damage markers subtotal</span>
                       <span className="font-mono">${damagesTotal.toLocaleString()}</span>
                     </div>
                   )}
@@ -953,61 +1051,41 @@ export function ClaimsCopilot() {
               </ul>
             </Card>
 
-            {(step === "estimate" || step === "review") && (
-              <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-1">Final Decision</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Step 5 of 6 — Approve the claim or send it for senior review
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button onClick={() => finalize("approved")} className="flex-1">
-                    Approve Claim
-                  </Button>
-                  <Button
-                    onClick={() => finalize("pending_review")}
-                    variant="secondary"
-                    className="flex-1"
-                  >
-                    Send for Review
-                  </Button>
-                  <Button
-                    onClick={() => finalize("rejected")}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    Reject
-                  </Button>
-                </div>
-              </Card>
-            )}
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-1">Submit for Final Approval</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Step 5 of 5 — Forward this validated estimate to the claims adjuster for the final decision
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button variant="outline" onClick={() => setStep("report")} className="sm:w-auto">
+                  Back to damage validation
+                </Button>
+                <Button
+                  onClick={() => finalize("pending_review")}
+                  className="flex-1"
+                  size="lg"
+                >
+                  Submit for Final Approval
+                </Button>
+              </div>
+            </Card>
           </div>
         )}
 
         {step === "done" && (
           <div className="space-y-4">
             <Card className="p-8 text-center">
-              <div className="text-4xl mb-3">
-                {decision === "approved" ? "✓" : decision === "pending_review" ? "⌛" : "✕"}
-              </div>
-              <h2 className="text-2xl font-semibold mb-2">
-                Claim{" "}
-                {decision === "approved"
-                  ? "Approved"
-                  : decision === "pending_review"
-                    ? "Pending Review"
-                    : "Rejected"}
-              </h2>
+              <div className="text-4xl mb-3">⌛</div>
+              <h2 className="text-2xl font-semibold mb-2">Final Overview</h2>
               <p className="text-muted-foreground font-mono text-sm">{claimId}</p>
-              {decision === "pending_review" && (
-                <p className="text-muted-foreground mt-2 text-sm">
-                  Forwarded to a senior adjuster for manual review.
-                </p>
-              )}
+              <p className="text-muted-foreground mt-2 text-sm">
+                Submitted to the claims adjuster for final approval.
+              </p>
             </Card>
 
             {assessment && (
               <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Final Summary</h2>
+                <h2 className="text-xl font-semibold mb-4">Claim Summary</h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
                   <div className="rounded border p-3">
@@ -1148,44 +1226,31 @@ function Stepper({
   hasEstimate: boolean;
   decision: "approved" | "rejected" | "pending_review" | null;
 }) {
-  // 6-stage workflow. The final stage label changes based on the agent's decision.
-  const finalLabel =
-    decision === "approved"
-      ? "Approved"
-      : decision === "pending_review"
-        ? "Pending Review"
-        : decision === "rejected"
-          ? "Rejected"
-          : "Approved / Pending Review";
-
+  // 5-stage workflow.
   const stages = [
     { key: "created", label: "Claim Created" },
     { key: "media", label: "Media Uploaded" },
-    { key: "assessed", label: "AI Assessed" },
-    { key: "estimate", label: "Estimate Generated" },
-    { key: "reviewed", label: "Reviewed" },
-    { key: "final", label: finalLabel },
+    { key: "assessed", label: "Damage Validated" },
+    { key: "estimate", label: "Cost Estimate" },
+    { key: "final", label: "Final Overview" },
   ];
 
   // Determine which stage is currently active.
   let activeIndex = 0;
   if (step === "intake") activeIndex = 0;
-  else if (step === "upload") activeIndex = hasMedia ? 1 : 1;
+  else if (step === "upload") activeIndex = 1;
   else if (step === "processing") activeIndex = 2;
   else if (step === "report") activeIndex = 2;
-  else if (step === "estimate") activeIndex = hasEstimate ? 3 : 3;
-  else if (step === "review") activeIndex = 4;
-  else if (step === "done") activeIndex = 5;
+  else if (step === "estimate" || step === "review") activeIndex = 3;
+  else if (step === "done") activeIndex = 4;
 
-  // Determine completion: a stage is "done" if its prerequisite data exists
-  // OR the workflow has progressed past it.
+  // A stage is done if the workflow has progressed past it.
   const isDone = (i: number) => {
-    if (step === "done" && i < 5) return true;
+    if (step === "done" && i < 4) return true;
     if (i === 0) return step !== "intake";
     if (i === 1) return hasMedia && (step === "processing" || step === "report" || step === "estimate" || step === "review" || step === "done");
-    if (i === 2) return hasAssessment && (step === "report" || step === "estimate" || step === "review" || step === "done");
-    if (i === 3) return hasEstimate && (step === "estimate" || step === "review" || step === "done");
-    if (i === 4) return step === "review" || step === "done";
+    if (i === 2) return hasAssessment && (step === "estimate" || step === "review" || step === "done");
+    if (i === 3) return hasEstimate && step === "done";
     return false;
   };
 
@@ -1195,17 +1260,13 @@ function Stepper({
         {stages.map((s, i) => {
           const done = isDone(i);
           const current = i === activeIndex && step !== "done";
-          const isFinalDone = i === 5 && step === "done";
+          const isFinalDone = i === 4 && step === "done";
           return (
             <div key={s.key} className="flex items-center gap-2 flex-1 min-w-[120px]">
               <div
                 className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium shrink-0 ${
                   isFinalDone
-                    ? decision === "approved"
-                      ? "bg-emerald-600 text-white"
-                      : decision === "pending_review"
-                        ? "bg-amber-500 text-white"
-                        : "bg-destructive text-destructive-foreground"
+                    ? "bg-amber-500 text-white"
                     : done
                       ? "bg-primary text-primary-foreground"
                       : current
@@ -1229,3 +1290,4 @@ function Stepper({
     </div>
   );
 }
+
