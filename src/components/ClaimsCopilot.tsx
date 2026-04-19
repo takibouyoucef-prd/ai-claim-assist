@@ -205,7 +205,7 @@ export function ClaimsCopilot() {
     setClaimId(generateClaimId());
     setClient(generateClient());
     setPolicy(generatePolicy());
-    setVehicleType("");
+    setVehicle(generateVehicle());
     setDescription("");
     setImages([]);
     setVideo(null);
