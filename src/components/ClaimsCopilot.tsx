@@ -1290,7 +1290,4 @@ function Stepper({
     </div>
   );
 }
-      </div>
-    </div>
-  );
-}
+
