@@ -127,6 +127,9 @@ export function ClaimsCopilot() {
   const [estimateDamages, setEstimateDamages] = useState<Damage[]>([]);
   // Whether the agent has chosen to manually edit AI-recommended repair costs.
   const [manualRepairEdit, setManualRepairEdit] = useState(false);
+  // Simulated claims-adjuster outcome on the Final Overview screen.
+  const [adjusterDecision, setAdjusterDecision] = useState<"approved" | "rejected" | null>(null);
+  const [repairRequestId, setRepairRequestId] = useState<string | null>(null);
 
   const startClaim = () => {
     setClaimId(generateClaimId());
