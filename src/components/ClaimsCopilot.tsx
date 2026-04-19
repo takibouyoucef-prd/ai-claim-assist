@@ -113,6 +113,16 @@ const generatePolicyNumber = () =>
 
 const POLICY_TYPES = ["Comprehensive", "Collision", "Full Coverage", "Liability + Collision"];
 
+const DUMMY_VEHICLES: { type: string; makeModel: string; year: number; vin: string }[] = [
+  { type: "Sedan", makeModel: "Honda Accord EX", year: 2021, vin: "1HGCV1F30MA012345" },
+  { type: "SUV", makeModel: "Toyota RAV4 XLE", year: 2022, vin: "JTMRWRFV8ND098712" },
+  { type: "Truck", makeModel: "Ford F-150 Lariat", year: 2020, vin: "1FTFW1E80LFA45123" },
+  { type: "Van", makeModel: "Chrysler Pacifica Touring", year: 2023, vin: "2C4RC1BG5PR123987" },
+  { type: "Sedan", makeModel: "Tesla Model 3", year: 2022, vin: "5YJ3E1EA7NF456321" },
+];
+
+const generateVehicle = () => DUMMY_VEHICLES[Math.floor(Math.random() * DUMMY_VEHICLES.length)];
+
 const generatePolicy = () => ({
   number: generatePolicyNumber(),
   type: POLICY_TYPES[Math.floor(Math.random() * POLICY_TYPES.length)],
