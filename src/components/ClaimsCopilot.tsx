@@ -98,6 +98,27 @@ const extractVideoFrames = (dataUrl: string, count = 3): Promise<string[]> =>
 const generateClaimId = () =>
   `CLM-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
+const DUMMY_CLIENTS = [
+  { name: "Sarah Mitchell", email: "sarah.mitchell@example.com", phone: "(415) 555-0142" },
+  { name: "James O'Connor", email: "james.oconnor@example.com", phone: "(312) 555-0188" },
+  { name: "Priya Raman", email: "priya.raman@example.com", phone: "(206) 555-0173" },
+  { name: "Marcus Bennett", email: "marcus.bennett@example.com", phone: "(617) 555-0119" },
+  { name: "Elena Vasquez", email: "elena.vasquez@example.com", phone: "(305) 555-0166" },
+];
+
+const generateClient = () => DUMMY_CLIENTS[Math.floor(Math.random() * DUMMY_CLIENTS.length)];
+
+const generatePolicyNumber = () =>
+  `POL-${Math.floor(Math.random() * 9000 + 1000)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+const POLICY_TYPES = ["Comprehensive", "Collision", "Full Coverage", "Liability + Collision"];
+
+const generatePolicy = () => ({
+  number: generatePolicyNumber(),
+  type: POLICY_TYPES[Math.floor(Math.random() * POLICY_TYPES.length)],
+  deductible: [250, 500, 750, 1000][Math.floor(Math.random() * 4)],
+});
+
 const fileToDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -109,6 +130,8 @@ const fileToDataUrl = (file: File): Promise<string> =>
 export function ClaimsCopilot() {
   const [step, setStep] = useState<Step>("start");
   const [claimId, setClaimId] = useState("");
+  const [client, setClient] = useState<{ name: string; email: string; phone: string } | null>(null);
+  const [policy, setPolicy] = useState<{ number: string; type: string; deductible: number } | null>(null);
   const [vehicleType, setVehicleType] = useState("");
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<ImageFile[]>([]);
@@ -169,6 +192,8 @@ export function ClaimsCopilot() {
 
   const startClaim = () => {
     setClaimId(generateClaimId());
+    setClient(generateClient());
+    setPolicy(generatePolicy());
     setVehicleType("");
     setDescription("");
     setImages([]);
@@ -250,6 +275,8 @@ export function ClaimsCopilot() {
     };
 
     setClaimId(generateClaimId());
+    setClient({ name: "Sarah Mitchell", email: "sarah.mitchell@example.com", phone: "(415) 555-0142" });
+    setPolicy({ number: "POL-4827-K9XQ", type: "Comprehensive", deductible: 500 });
     setVehicleType("Sedan");
     setDescription(
       "Rear-ended at low speed in a parking lot, then pushed into a concrete barrier causing front-end damage. Driver and passenger uninjured.",
@@ -603,6 +630,45 @@ export function ClaimsCopilot() {
               <div>
                 <Label>Claim ID</Label>
                 <Input value={claimId} readOnly className="font-mono mt-1.5 bg-muted" />
+              </div>
+
+              <div className="rounded-md border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Policyholder & Policy</h3>
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    Auto-prefilled from records
+                  </span>
+                </div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Client Name</Label>
+                    <Input value={client?.name ?? ""} readOnly className="mt-1 bg-background" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <Input value={client?.email ?? ""} readOnly className="mt-1 bg-background" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Phone</Label>
+                    <Input value={client?.phone ?? ""} readOnly className="mt-1 bg-background" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Policy Number</Label>
+                    <Input value={policy?.number ?? ""} readOnly className="mt-1 bg-background font-mono" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Coverage Type</Label>
+                    <Input value={policy?.type ?? ""} readOnly className="mt-1 bg-background" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Deductible</Label>
+                    <Input
+                      value={policy ? `$${policy.deductible.toLocaleString()}` : ""}
+                      readOnly
+                      className="mt-1 bg-background font-mono"
+                    />
+                  </div>
+                </div>
               </div>
               <div>
                 <Label htmlFor="vehicle">Vehicle Type</Label>
