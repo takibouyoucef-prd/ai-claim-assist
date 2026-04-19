@@ -161,7 +161,7 @@ export function ClaimsCopilot() {
   // does NOT affect the canonical damage report shown in the final overview.
   const [estimateDamages, setEstimateDamages] = useState<Damage[]>([]);
   // Whether the agent has chosen to manually edit AI-recommended repair costs.
-  const [manualRepairEdit, setManualRepairEdit] = useState(false);
+  const [manualRepairEdit, setManualRepairEdit] = useState(true);
   const [catalogOpen, setCatalogOpen] = useState(false);
 
   const addFromCatalog = (it: CatalogItem) => {
@@ -213,7 +213,7 @@ export function ClaimsCopilot() {
     setDecision(null);
     setEstimateLines([]);
     setEstimateDamages([]);
-    setManualRepairEdit(false);
+    setManualRepairEdit(true);
     setAdjusterDecision(null);
     setRepairRequestId(null);
     setStep("intake");
@@ -458,7 +458,7 @@ export function ClaimsCopilot() {
     setEstimateLines([...parts, ...labor]);
     // Seed an editable copy of damages for the cost estimate page.
     setEstimateDamages(assessment.damages.map((d) => ({ ...d })));
-    setManualRepairEdit(false);
+    setManualRepairEdit(true);
     setStep("estimate");
   };
 
@@ -1019,43 +1019,22 @@ export function ClaimsCopilot() {
               const total = partsTotal + laborTotal + damagesTotal;
               return (
                 <Card className="p-6">
-                  <div className="flex items-start justify-between gap-3 mb-1">
-                    <h2 className="text-xl font-semibold">Cost Estimate Validation</h2>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setManualRepairEdit(true);
-                          setCatalogOpen(true);
-                        }}
-                      >
-                        🔎 Search catalog
-                        <kbd className="ml-2 hidden sm:inline-flex h-4 items-center rounded border bg-muted px-1 text-[10px] font-mono">⌘K</kbd>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={manualRepairEdit ? "default" : "outline"}
-                        onClick={() => setManualRepairEdit((v) => !v)}
-                      >
-                        {manualRepairEdit ? "Done editing manually" : "Review repair costs manually"}
-                      </Button>
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div>
+                      <h2 className="text-xl font-semibold">Cost Estimate Validation</h2>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Step 3 of 4 — Adjust line items or search the catalog for priced parts, labor, and damage packages.
+                      </p>
                     </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Step 3 of 4 — Review and edit each damage marker, parts, and labor line. Use{" "}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setManualRepairEdit(true);
-                        setCatalogOpen(true);
-                      }}
-                      className="underline hover:text-foreground"
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCatalogOpen(true)}
                     >
-                      Search catalog
-                    </button>{" "}
-                    to add real-world priced parts, labor, or damage packages. Removing a damage here will not erase it from the final damage report.
-                  </p>
+                      🔎 Search catalog
+                      <kbd className="ml-2 hidden sm:inline-flex h-4 items-center rounded border bg-muted px-1 text-[10px] font-mono">⌘K</kbd>
+                    </Button>
+                  </div>
 
                   {/* Damage markers as editable line items (independent copy) */}
                   <div className="mb-5">
