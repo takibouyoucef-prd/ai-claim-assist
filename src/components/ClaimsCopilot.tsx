@@ -122,6 +122,14 @@ export function ClaimsCopilot() {
     { label: "Estimating cost", status: "pending" },
   ]);
   const [estimateLines, setEstimateLines] = useState<EstimateLine[]>([]);
+  // Independent copy of damages used in the cost estimate. Removing damages here
+  // does NOT affect the canonical damage report shown in the final overview.
+  const [estimateDamages, setEstimateDamages] = useState<Damage[]>([]);
+  // Whether the agent has chosen to manually edit AI-recommended repair costs.
+  const [manualRepairEdit, setManualRepairEdit] = useState(false);
+  // Simulated claims-adjuster outcome on the Final Overview screen.
+  const [adjusterDecision, setAdjusterDecision] = useState<"approved" | "rejected" | null>(null);
+  const [repairRequestId, setRepairRequestId] = useState<string | null>(null);
 
   const startClaim = () => {
     setClaimId(generateClaimId());
@@ -132,6 +140,10 @@ export function ClaimsCopilot() {
     setAssessment(null);
     setDecision(null);
     setEstimateLines([]);
+    setEstimateDamages([]);
+    setManualRepairEdit(false);
+    setAdjusterDecision(null);
+    setRepairRequestId(null);
     setStep("intake");
   };
 
@@ -220,6 +232,7 @@ export function ClaimsCopilot() {
       { item: "Rear quarter panel touch-up", category: "Parts", cost: 420 },
       { item: "Labor (8 hours)", category: "Labor", cost: 720 },
     ]);
+    setEstimateDamages(demoAssessment.damages.map((d) => ({ ...d })));
     setProcessingSteps([
       { label: "Validating media", status: "done" },
       { label: "Detecting damage", status: "done" },
@@ -369,7 +382,17 @@ export function ClaimsCopilot() {
       labor.push({ item: "Repair labor", category: "Labor", cost: Math.round(partsTotal * 0.35) });
     }
     setEstimateLines([...parts, ...labor]);
+    // Seed an editable copy of damages for the cost estimate page.
+    setEstimateDamages(assessment.damages.map((d) => ({ ...d })));
+    setManualRepairEdit(false);
     setStep("estimate");
+  };
+
+  const updateEstimateDamage = (idx: number, patch: Partial<Damage>) => {
+    setEstimateDamages((prev) => prev.map((d, i) => (i === idx ? { ...d, ...patch } : d)));
+  };
+  const removeEstimateDamage = (idx: number) => {
+    setEstimateDamages((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const updateLine = (idx: number, patch: Partial<EstimateLine>) => {
@@ -429,8 +452,8 @@ export function ClaimsCopilot() {
     );
   };
 
-  // Compute recommended next steps based on the current claim state.
-  const getNextSteps = (): { label: string; tone: "default" | "warn" | "danger" | "good" }[] => {
+  // Compute recommended next steps based on the current claim state and total cost.
+  const getNextSteps = (totalCost?: number): { label: string; tone: "default" | "warn" | "danger" | "good" }[] => {
     const steps: { label: string; tone: "default" | "warn" | "danger" | "good" }[] = [];
     if (!assessment) return steps;
     if (assessment.fraudRisk.level === "High") {
@@ -449,6 +472,30 @@ export function ClaimsCopilot() {
     }
     if (assessment.damages.some((d) => d.severity === "High")) {
       steps.push({ label: "High-severity damage detected — confirm parts availability", tone: "default" });
+    }
+    // Cost-based recommendations
+    if (typeof totalCost === "number" && totalCost > 0) {
+      if (totalCost >= 10000) {
+        steps.push({
+          label: `High repair cost ($${totalCost.toLocaleString()}) — require senior adjuster sign-off and second appraisal`,
+          tone: "danger",
+        });
+      } else if (totalCost >= 5000) {
+        steps.push({
+          label: `Significant estimate ($${totalCost.toLocaleString()}) — confirm parts pricing with at least one repair shop`,
+          tone: "warn",
+        });
+      } else if (totalCost < 500) {
+        steps.push({
+          label: `Low repair cost ($${totalCost.toLocaleString()}) — consider fast-track approval to reduce handling overhead`,
+          tone: "good",
+        });
+      } else {
+        steps.push({
+          label: `Estimate of $${totalCost.toLocaleString()} is within standard approval range`,
+          tone: "default",
+        });
+      }
     }
     if (step === "report") {
       steps.push({ label: "Generate the cost estimate to continue", tone: "default" });
@@ -671,7 +718,7 @@ export function ClaimsCopilot() {
 
               <div className="flex justify-end pt-2">
                 <Button type="submit" disabled={extracting}>
-                  Run AI Assessment
+                  Create Claim and run AI Assessment
                 </Button>
               </div>
             </form>
@@ -731,7 +778,7 @@ export function ClaimsCopilot() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h2 className="text-xl font-semibold">Damage Validation &amp; Preview</h2>
-                  <p className="text-sm text-muted-foreground">Step 2 of 4 — Review AI-detected damage and validate media coverage</p>
+                  <p className="text-sm text-muted-foreground">Step 2 of 4 — The AI checks the uploaded media for clarity, sufficiency, and integrity, then highlights detected damage for your review.</p>
                 </div>
                 <Badge variant="outline">Confidence: {assessment.confidence}%</Badge>
               </div>
@@ -818,7 +865,10 @@ export function ClaimsCopilot() {
                 </div>
               )}
 
-              <h3 className="font-medium mt-6 mb-3 text-sm">Damage Preview &amp; Annotations</h3>
+              <div className="mt-6 mb-3 flex items-center justify-between gap-3">
+                <h3 className="font-medium text-sm">Damage Preview &amp; Annotations</h3>
+                <Badge variant="secondary" className="text-[10px]">⚡ AI-generated cost estimates · review &amp; adjust</Badge>
+              </div>
               <DamageAnnotator
                 previews={[
                   ...images.map((m, i) => ({ src: m.dataUrl, label: `Image ${i + 1}` })),
@@ -849,29 +899,38 @@ export function ClaimsCopilot() {
               const laborTotal = estimateLines
                 .filter((l) => l.category === "Labor")
                 .reduce((s, l) => s + (Number(l.cost) || 0), 0);
-              const damagesTotal = assessment.damages.reduce(
+              const damagesTotal = estimateDamages.reduce(
                 (s, d) => s + (Number(d.cost) || 0),
                 0,
               );
               const total = partsTotal + laborTotal + damagesTotal;
               return (
                 <Card className="p-6">
-                  <h2 className="text-xl font-semibold mb-1">Cost Estimate Validation</h2>
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <h2 className="text-xl font-semibold">Cost Estimate Validation</h2>
+                    <Button
+                      size="sm"
+                      variant={manualRepairEdit ? "default" : "outline"}
+                      onClick={() => setManualRepairEdit((v) => !v)}
+                    >
+                      {manualRepairEdit ? "Done editing manually" : "Review repair costs manually"}
+                    </Button>
+                  </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Step 3 of 4 — Review and edit each damage marker, parts, and labor line
+                    Step 3 of 4 — Review and edit each damage marker, parts, and labor line. Removing a damage here will not erase it from the final damage report.
                   </p>
 
-                  {/* Damage markers as editable line items */}
+                  {/* Damage markers as editable line items (independent copy) */}
                   <div className="mb-5">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-medium text-sm">Damage Markers</h3>
-                      <span className="text-xs text-muted-foreground">{assessment.damages.length} item{assessment.damages.length === 1 ? "" : "s"}</span>
+                      <span className="text-xs text-muted-foreground">{estimateDamages.length} item{estimateDamages.length === 1 ? "" : "s"}</span>
                     </div>
-                    {assessment.damages.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">No damage markers recorded.</p>
+                    {estimateDamages.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">No damage markers in the estimate.</p>
                     ) : (
                       <div className="space-y-2">
-                        {assessment.damages.map((d, i) => (
+                        {estimateDamages.map((d, i) => (
                           <div key={i} className="flex items-center gap-2 p-2 rounded border">
                             <span
                               className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
@@ -886,9 +945,10 @@ export function ClaimsCopilot() {
                             </span>
                             <Input
                               value={d.location}
-                              onChange={(e) => updateDamage(i, { location: e.target.value })}
+                              onChange={(e) => updateEstimateDamage(i, { location: e.target.value })}
                               className="flex-1 min-w-0"
                               placeholder="Location"
+                              readOnly={!manualRepairEdit}
                             />
                             <Badge
                               variant={
@@ -907,12 +967,13 @@ export function ClaimsCopilot() {
                               <Input
                                 type="number"
                                 value={d.cost ?? 0}
-                                onChange={(e) => updateDamage(i, { cost: Number(e.target.value) || 0 })}
+                                onChange={(e) => updateEstimateDamage(i, { cost: Number(e.target.value) || 0 })}
                                 className="w-24 text-right font-mono"
+                                readOnly={!manualRepairEdit}
                               />
                             </div>
                             <button
-                              onClick={() => removeDamage(i)}
+                              onClick={() => removeEstimateDamage(i)}
                               className="text-muted-foreground hover:text-destructive text-sm px-2"
                               aria-label="Remove damage"
                             >
@@ -932,7 +993,10 @@ export function ClaimsCopilot() {
                     return (
                       <div key={cat} className="mb-5">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-medium text-sm">{cat}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-sm">{cat}</h3>
+                            <Badge variant="secondary" className="text-[10px]">⚡ AI recommended</Badge>
+                          </div>
                           <button
                             onClick={() => addLine(cat)}
                             className="text-xs text-muted-foreground hover:text-foreground"
@@ -950,6 +1014,7 @@ export function ClaimsCopilot() {
                                 value={l.item}
                                 onChange={(e) => updateLine(i, { item: e.target.value })}
                                 className="flex-1"
+                                readOnly={!manualRepairEdit}
                               />
                               <div className="flex items-center">
                                 <span className="text-sm text-muted-foreground mr-1">$</span>
@@ -960,6 +1025,7 @@ export function ClaimsCopilot() {
                                     updateLine(i, { cost: Number(e.target.value) || 0 })
                                   }
                                   className="w-28 text-right font-mono"
+                                  readOnly={!manualRepairEdit}
                                 />
                               </div>
                               <button
@@ -980,17 +1046,26 @@ export function ClaimsCopilot() {
                     );
                   })}
 
-                  {damagesTotal > 0 && (
-                    <div className="flex items-center justify-between text-sm pb-2 border-b mb-2">
+                  {/* Total breakdown */}
+                  <div className="border-t pt-3 space-y-1.5 text-sm">
+                    <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Damage markers subtotal</span>
                       <span className="font-mono">${damagesTotal.toLocaleString()}</span>
                     </div>
-                  )}
-                  <div className="border-t pt-3 flex items-center justify-between">
-                    <span className="font-semibold">Total Estimated Cost</span>
-                    <span className="font-mono text-lg font-semibold">
-                      ${total.toLocaleString()}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Parts subtotal</span>
+                      <span className="font-mono">${partsTotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Labor subtotal</span>
+                      <span className="font-mono">${laborTotal.toLocaleString()}</span>
+                    </div>
+                    <div className="border-t pt-2 mt-2 flex items-center justify-between">
+                      <span className="font-semibold">Total Estimated Cost</span>
+                      <span className="font-mono text-lg font-semibold">
+                        ${total.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                   <div className="mt-3 text-xs text-muted-foreground">
                     AI suggested ${assessment.estimatedCost.toLocaleString()} ·
@@ -1004,43 +1079,51 @@ export function ClaimsCopilot() {
             })()}
 
             {/* Recommended Next Steps — visible from report onward */}
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-1">Recommended Next Steps</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Based on AI confidence, fraud signals, and media coverage
-              </p>
-              <ul className="space-y-2">
-                {getNextSteps().map((s, i) => (
-                  <li
-                    key={i}
-                    className={`flex items-start gap-2 p-3 rounded border text-sm ${
-                      s.tone === "danger"
-                        ? "border-destructive/40 bg-destructive/5"
-                        : s.tone === "warn"
-                          ? "border-amber-500/40 bg-amber-500/5"
-                          : s.tone === "good"
-                            ? "border-emerald-500/40 bg-emerald-500/5"
-                            : "border-border"
-                    }`}
-                  >
-                    <span
-                      className={`mt-0.5 ${
-                        s.tone === "danger"
-                          ? "text-destructive"
-                          : s.tone === "warn"
-                            ? "text-amber-600"
-                            : s.tone === "good"
-                              ? "text-emerald-600"
-                              : "text-muted-foreground"
-                      }`}
-                    >
-                      ●
-                    </span>
-                    <span>{s.label}</span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
+            {(() => {
+              const partsTotal = estimateLines.filter((l) => l.category === "Parts").reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const laborTotal = estimateLines.filter((l) => l.category === "Labor").reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const damagesTotal = estimateDamages.reduce((s, d) => s + (Number(d.cost) || 0), 0);
+              const total = partsTotal + laborTotal + damagesTotal;
+              return (
+                <Card className="p-6">
+                  <h2 className="text-xl font-semibold mb-1">Recommended Next Steps</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Based on AI confidence, fraud signals, media coverage, and the validated total estimate of <span className="font-mono font-medium text-foreground">${total.toLocaleString()}</span>
+                  </p>
+                  <ul className="space-y-2">
+                    {getNextSteps(total).map((s, i) => (
+                      <li
+                        key={i}
+                        className={`flex items-start gap-2 p-3 rounded border text-sm ${
+                          s.tone === "danger"
+                            ? "border-destructive/40 bg-destructive/5"
+                            : s.tone === "warn"
+                              ? "border-amber-500/40 bg-amber-500/5"
+                              : s.tone === "good"
+                                ? "border-emerald-500/40 bg-emerald-500/5"
+                                : "border-border"
+                        }`}
+                      >
+                        <span
+                          className={`mt-0.5 ${
+                            s.tone === "danger"
+                              ? "text-destructive"
+                              : s.tone === "warn"
+                                ? "text-amber-600"
+                                : s.tone === "good"
+                                  ? "text-emerald-600"
+                                  : "text-muted-foreground"
+                          }`}
+                        >
+                          ●
+                        </span>
+                        <span>{s.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              );
+            })()}
 
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-1">Submit for Final Approval</h2>
@@ -1065,120 +1148,212 @@ export function ClaimsCopilot() {
 
         {step === "done" && (
           <div className="space-y-4">
-            <Card className="p-8 text-center">
-              <div className="text-4xl mb-3">⌛</div>
-              <h2 className="text-2xl font-semibold mb-2">Final Overview</h2>
-              <p className="text-muted-foreground font-mono text-sm">{claimId}</p>
-              <p className="text-muted-foreground mt-2 text-sm">
-                Submitted to the claims adjuster for final approval.
-              </p>
-            </Card>
+            {(() => {
+              const partsLines = estimateLines.filter((l) => l.category === "Parts");
+              const laborLines = estimateLines.filter((l) => l.category === "Labor");
+              const partsTotal = partsLines.reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const laborTotal = laborLines.reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const damagesTotal = estimateDamages.reduce((s, d) => s + (Number(d.cost) || 0), 0);
+              const total = partsTotal + laborTotal + damagesTotal;
 
-            {assessment && (
-              <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Claim Summary</h2>
+              const simulateAdjuster = (choice: "approved" | "rejected") => {
+                setAdjusterDecision(choice);
+                if (choice === "approved") {
+                  const reqId = `RR-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+                  setRepairRequestId(reqId);
+                  toast.success(`Repair request ${reqId} generated and sent to the repair shop`);
+                } else {
+                  setRepairRequestId(null);
+                  toast.error("Claim rejected by the adjuster");
+                }
+              };
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-                  <div className="rounded border p-3">
-                    <div className="text-xs text-muted-foreground mb-1">Vehicle</div>
-                    <div className="font-medium">{vehicleType}</div>
-                  </div>
-                  <div className="rounded border p-3">
-                    <div className="text-xs text-muted-foreground mb-1">Decision</div>
-                    <Badge
-                      variant={
-                        decision === "approved"
-                          ? "default"
-                          : decision === "pending_review"
-                            ? "secondary"
-                            : "destructive"
-                      }
-                    >
-                      {decision === "approved"
-                        ? "Approved"
-                        : decision === "pending_review"
-                          ? "Pending Review"
-                          : "Rejected"}
-                    </Badge>
-                  </div>
-                  <div className="rounded border p-3">
-                    <div className="text-xs text-muted-foreground mb-1">AI Confidence</div>
-                    <div className="font-medium">{assessment.confidence}%</div>
-                  </div>
-                </div>
+              const isPending = adjusterDecision === null;
+              const headerIcon = adjusterDecision === "approved" ? "✓" : adjusterDecision === "rejected" ? "✕" : "⌛";
+              const headerSub = adjusterDecision === "approved"
+                ? "Approved by the claims adjuster. Repair request generated."
+                : adjusterDecision === "rejected"
+                  ? "Rejected by the claims adjuster."
+                  : "Submitted to the claims adjuster for final approval.";
 
-                <h3 className="font-medium text-sm mb-2">Final Damage Report</h3>
-                {assessment.damages.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic mb-4">No damages recorded.</p>
-                ) : (
-                  <div className="space-y-1.5 mb-6">
-                    {assessment.damages.map((d, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between text-sm p-2 rounded border"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{d.location}</div>
-                          <div className="text-xs text-muted-foreground">{d.type}</div>
+              return (
+                <>
+                  <Card className="p-8 text-center">
+                    <div className="text-4xl mb-3">{headerIcon}</div>
+                    <h2 className="text-2xl font-semibold mb-2">Final Overview</h2>
+                    <p className="text-muted-foreground font-mono text-sm">{claimId}</p>
+                    <p className="text-muted-foreground mt-2 text-sm">{headerSub}</p>
+                    {repairRequestId && (
+                      <div className="mt-4 inline-flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/5 px-3 py-1.5 text-sm">
+                        <span className="text-emerald-600">🛠</span>
+                        <span>Repair request <span className="font-mono font-medium">{repairRequestId}</span> sent to the repair shop</span>
+                      </div>
+                    )}
+                  </Card>
+
+                  {assessment && (
+                    <Card className="p-6">
+                      <h2 className="text-xl font-semibold mb-4">Claim Summary</h2>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                        <div className="rounded border p-3">
+                          <div className="text-xs text-muted-foreground mb-1">Vehicle</div>
+                          <div className="font-medium">{vehicleType}</div>
                         </div>
-                        <Badge
-                          variant={
-                            d.severity === "High"
-                              ? "destructive"
-                              : d.severity === "Medium"
+                        <div className="rounded border p-3">
+                          <div className="text-xs text-muted-foreground mb-1">Adjuster Decision</div>
+                          <Badge
+                            variant={
+                              adjusterDecision === "approved"
                                 ? "default"
-                                : "secondary"
-                          }
-                          className="mr-3"
-                        >
-                          {d.severity}
-                        </Badge>
-                        <span className="font-mono text-sm w-24 text-right">
-                          ${(d.cost ?? 0).toLocaleString()}
-                        </span>
+                                : adjusterDecision === "rejected"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                          >
+                            {adjusterDecision === "approved"
+                              ? "Approved"
+                              : adjusterDecision === "rejected"
+                                ? "Rejected"
+                                : "Pending Review"}
+                          </Badge>
+                        </div>
+                        <div className="rounded border p-3 col-span-2 sm:col-span-1">
+                          <div className="text-xs text-muted-foreground mb-1">Total Estimate</div>
+                          <div className="font-mono font-semibold">${total.toLocaleString()}</div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
 
-                <h3 className="font-medium text-sm mb-2">Final Cost Estimate</h3>
-                {(() => {
-                  const partsTotal = estimateLines
-                    .filter((l) => l.category === "Parts")
-                    .reduce((s, l) => s + (Number(l.cost) || 0), 0);
-                  const laborTotal = estimateLines
-                    .filter((l) => l.category === "Labor")
-                    .reduce((s, l) => s + (Number(l.cost) || 0), 0);
-                  const damagesTotal = assessment.damages.reduce(
-                    (s, d) => s + (Number(d.cost) || 0),
-                    0,
-                  );
-                  const total = partsTotal + laborTotal + damagesTotal;
-                  return (
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Parts</span>
-                        <span className="font-mono">${partsTotal.toLocaleString()}</span>
+                      <h3 className="font-medium text-sm mb-2">Final Damage Report</h3>
+                      {assessment.damages.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic mb-4">No damages recorded.</p>
+                      ) : (
+                        <div className="space-y-1.5 mb-6">
+                          {assessment.damages.map((d, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center justify-between text-sm p-2 rounded border"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium truncate">{d.location}</div>
+                                <div className="text-xs text-muted-foreground">{d.type}</div>
+                              </div>
+                              <Badge
+                                variant={
+                                  d.severity === "High"
+                                    ? "destructive"
+                                    : d.severity === "Medium"
+                                      ? "default"
+                                      : "secondary"
+                                }
+                                className="mr-3"
+                              >
+                                {d.severity}
+                              </Badge>
+                              <span className="font-mono text-sm w-24 text-right">
+                                ${(d.cost ?? 0).toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <h3 className="font-medium text-sm mb-2">Parts &amp; Labor Detail</h3>
+                      {partsLines.length === 0 && laborLines.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic mb-4">No parts or labor lines.</p>
+                      ) : (
+                        <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                          <div className="rounded border p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Parts</span>
+                              <span className="font-mono text-xs">${partsTotal.toLocaleString()}</span>
+                            </div>
+                            {partsLines.length === 0 ? (
+                              <p className="text-xs text-muted-foreground italic">None</p>
+                            ) : (
+                              <ul className="space-y-1 text-xs">
+                                {partsLines.map((l, i) => (
+                                  <li key={i} className="flex justify-between gap-2">
+                                    <span className="truncate">{l.item}</span>
+                                    <span className="font-mono shrink-0">${l.cost.toLocaleString()}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          <div className="rounded border p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Labor</span>
+                              <span className="font-mono text-xs">${laborTotal.toLocaleString()}</span>
+                            </div>
+                            {laborLines.length === 0 ? (
+                              <p className="text-xs text-muted-foreground italic">None</p>
+                            ) : (
+                              <ul className="space-y-1 text-xs">
+                                {laborLines.map((l, i) => (
+                                  <li key={i} className="flex justify-between gap-2">
+                                    <span className="truncate">{l.item}</span>
+                                    <span className="font-mono shrink-0">${l.cost.toLocaleString()}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <h3 className="font-medium text-sm mb-2">Final Cost Estimate</h3>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Damage markers</span>
+                          <span className="font-mono">${damagesTotal.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Parts</span>
+                          <span className="font-mono">${partsTotal.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Labor</span>
+                          <span className="font-mono">${laborTotal.toLocaleString()}</span>
+                        </div>
+                        <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
+                          <span>
+                            {adjusterDecision === "approved" ? "Approved Payout" : "Total Estimate"}
+                          </span>
+                          <span className="font-mono text-lg">${total.toLocaleString()}</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Labor</span>
-                        <span className="font-mono">${laborTotal.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Damage markers</span>
-                        <span className="font-mono">${damagesTotal.toLocaleString()}</span>
-                      </div>
-                      <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
-                        <span>
-                          {decision === "approved" ? "Approved Payout" : "Total Estimate"}
-                        </span>
-                        <span className="font-mono text-lg">${total.toLocaleString()}</span>
-                      </div>
+                    </Card>
+                  )}
+
+                  {/* Adjuster simulation CTAs */}
+                  <Card className="p-6">
+                    <h3 className="font-semibold mb-1">Claims Adjuster Action</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {isPending
+                        ? "Simulate the claims adjuster's final decision. Approving will generate a repair request to send to the repair shop."
+                        : "Decision recorded. You can revise it below if needed."}
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button
+                        variant={adjusterDecision === "approved" ? "default" : "outline"}
+                        onClick={() => simulateAdjuster("approved")}
+                        className="flex-1"
+                      >
+                        ✓ Simulate adjuster approval
+                      </Button>
+                      <Button
+                        variant={adjusterDecision === "rejected" ? "destructive" : "outline"}
+                        onClick={() => simulateAdjuster("rejected")}
+                        className="flex-1"
+                      >
+                        ✕ Simulate adjuster rejection
+                      </Button>
                     </div>
-                  );
-                })()}
-              </Card>
-            )}
+                  </Card>
+                </>
+              );
+            })()}
 
             <div className="flex justify-center">
               <Button onClick={startClaim}>Create Another Claim</Button>
