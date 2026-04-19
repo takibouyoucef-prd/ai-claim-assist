@@ -870,29 +870,38 @@ export function ClaimsCopilot() {
               const laborTotal = estimateLines
                 .filter((l) => l.category === "Labor")
                 .reduce((s, l) => s + (Number(l.cost) || 0), 0);
-              const damagesTotal = assessment.damages.reduce(
+              const damagesTotal = estimateDamages.reduce(
                 (s, d) => s + (Number(d.cost) || 0),
                 0,
               );
               const total = partsTotal + laborTotal + damagesTotal;
               return (
                 <Card className="p-6">
-                  <h2 className="text-xl font-semibold mb-1">Cost Estimate Validation</h2>
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <h2 className="text-xl font-semibold">Cost Estimate Validation</h2>
+                    <Button
+                      size="sm"
+                      variant={manualRepairEdit ? "default" : "outline"}
+                      onClick={() => setManualRepairEdit((v) => !v)}
+                    >
+                      {manualRepairEdit ? "Done editing manually" : "Review repair costs manually"}
+                    </Button>
+                  </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Step 3 of 4 — Review and edit each damage marker, parts, and labor line
+                    Step 3 of 4 — Review and edit each damage marker, parts, and labor line. Removing a damage here will not erase it from the final damage report.
                   </p>
 
-                  {/* Damage markers as editable line items */}
+                  {/* Damage markers as editable line items (independent copy) */}
                   <div className="mb-5">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-medium text-sm">Damage Markers</h3>
-                      <span className="text-xs text-muted-foreground">{assessment.damages.length} item{assessment.damages.length === 1 ? "" : "s"}</span>
+                      <span className="text-xs text-muted-foreground">{estimateDamages.length} item{estimateDamages.length === 1 ? "" : "s"}</span>
                     </div>
-                    {assessment.damages.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">No damage markers recorded.</p>
+                    {estimateDamages.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">No damage markers in the estimate.</p>
                     ) : (
                       <div className="space-y-2">
-                        {assessment.damages.map((d, i) => (
+                        {estimateDamages.map((d, i) => (
                           <div key={i} className="flex items-center gap-2 p-2 rounded border">
                             <span
                               className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
@@ -907,9 +916,10 @@ export function ClaimsCopilot() {
                             </span>
                             <Input
                               value={d.location}
-                              onChange={(e) => updateDamage(i, { location: e.target.value })}
+                              onChange={(e) => updateEstimateDamage(i, { location: e.target.value })}
                               className="flex-1 min-w-0"
                               placeholder="Location"
+                              readOnly={!manualRepairEdit}
                             />
                             <Badge
                               variant={
@@ -928,12 +938,13 @@ export function ClaimsCopilot() {
                               <Input
                                 type="number"
                                 value={d.cost ?? 0}
-                                onChange={(e) => updateDamage(i, { cost: Number(e.target.value) || 0 })}
+                                onChange={(e) => updateEstimateDamage(i, { cost: Number(e.target.value) || 0 })}
                                 className="w-24 text-right font-mono"
+                                readOnly={!manualRepairEdit}
                               />
                             </div>
                             <button
-                              onClick={() => removeDamage(i)}
+                              onClick={() => removeEstimateDamage(i)}
                               className="text-muted-foreground hover:text-destructive text-sm px-2"
                               aria-label="Remove damage"
                             >
@@ -953,7 +964,10 @@ export function ClaimsCopilot() {
                     return (
                       <div key={cat} className="mb-5">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-medium text-sm">{cat}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-sm">{cat}</h3>
+                            <Badge variant="secondary" className="text-[10px]">⚡ AI recommended</Badge>
+                          </div>
                           <button
                             onClick={() => addLine(cat)}
                             className="text-xs text-muted-foreground hover:text-foreground"
@@ -971,6 +985,7 @@ export function ClaimsCopilot() {
                                 value={l.item}
                                 onChange={(e) => updateLine(i, { item: e.target.value })}
                                 className="flex-1"
+                                readOnly={!manualRepairEdit}
                               />
                               <div className="flex items-center">
                                 <span className="text-sm text-muted-foreground mr-1">$</span>
@@ -981,6 +996,7 @@ export function ClaimsCopilot() {
                                     updateLine(i, { cost: Number(e.target.value) || 0 })
                                   }
                                   className="w-28 text-right font-mono"
+                                  readOnly={!manualRepairEdit}
                                 />
                               </div>
                               <button
@@ -1001,17 +1017,26 @@ export function ClaimsCopilot() {
                     );
                   })}
 
-                  {damagesTotal > 0 && (
-                    <div className="flex items-center justify-between text-sm pb-2 border-b mb-2">
+                  {/* Total breakdown */}
+                  <div className="border-t pt-3 space-y-1.5 text-sm">
+                    <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Damage markers subtotal</span>
                       <span className="font-mono">${damagesTotal.toLocaleString()}</span>
                     </div>
-                  )}
-                  <div className="border-t pt-3 flex items-center justify-between">
-                    <span className="font-semibold">Total Estimated Cost</span>
-                    <span className="font-mono text-lg font-semibold">
-                      ${total.toLocaleString()}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Parts subtotal</span>
+                      <span className="font-mono">${partsTotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Labor subtotal</span>
+                      <span className="font-mono">${laborTotal.toLocaleString()}</span>
+                    </div>
+                    <div className="border-t pt-2 mt-2 flex items-center justify-between">
+                      <span className="font-semibold">Total Estimated Cost</span>
+                      <span className="font-mono text-lg font-semibold">
+                        ${total.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                   <div className="mt-3 text-xs text-muted-foreground">
                     AI suggested ${assessment.estimatedCost.toLocaleString()} ·
