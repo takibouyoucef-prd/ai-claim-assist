@@ -631,6 +631,45 @@ export function ClaimsCopilot() {
                 <Label>Claim ID</Label>
                 <Input value={claimId} readOnly className="font-mono mt-1.5 bg-muted" />
               </div>
+
+              <div className="rounded-md border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Policyholder & Policy</h3>
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    Auto-prefilled from records
+                  </span>
+                </div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Client Name</Label>
+                    <Input value={client?.name ?? ""} readOnly className="mt-1 bg-background" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <Input value={client?.email ?? ""} readOnly className="mt-1 bg-background" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Phone</Label>
+                    <Input value={client?.phone ?? ""} readOnly className="mt-1 bg-background" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Policy Number</Label>
+                    <Input value={policy?.number ?? ""} readOnly className="mt-1 bg-background font-mono" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Coverage Type</Label>
+                    <Input value={policy?.type ?? ""} readOnly className="mt-1 bg-background" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Deductible</Label>
+                    <Input
+                      value={policy ? `$${policy.deductible.toLocaleString()}` : ""}
+                      readOnly
+                      className="mt-1 bg-background font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
               <div>
                 <Label htmlFor="vehicle">Vehicle Type</Label>
                 <Select value={vehicleType} onValueChange={setVehicleType}>
