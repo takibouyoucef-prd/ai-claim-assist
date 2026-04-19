@@ -818,7 +818,10 @@ export function ClaimsCopilot() {
                 </div>
               )}
 
-              <h3 className="font-medium mt-6 mb-3 text-sm">Damage Preview &amp; Annotations</h3>
+              <div className="mt-6 mb-3 flex items-center justify-between gap-3">
+                <h3 className="font-medium text-sm">Damage Preview &amp; Annotations</h3>
+                <Badge variant="secondary" className="text-[10px]">⚡ AI-generated cost estimates · review &amp; adjust</Badge>
+              </div>
               <DamageAnnotator
                 previews={[
                   ...images.map((m, i) => ({ src: m.dataUrl, label: `Image ${i + 1}` })),
