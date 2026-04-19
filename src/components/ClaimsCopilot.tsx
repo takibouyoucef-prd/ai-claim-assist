@@ -1075,28 +1075,17 @@ export function ClaimsCopilot() {
         {step === "done" && (
           <div className="space-y-4">
             <Card className="p-8 text-center">
-              <div className="text-4xl mb-3">
-                {decision === "approved" ? "✓" : decision === "pending_review" ? "⌛" : "✕"}
-              </div>
-              <h2 className="text-2xl font-semibold mb-2">
-                Claim{" "}
-                {decision === "approved"
-                  ? "Approved"
-                  : decision === "pending_review"
-                    ? "Pending Review"
-                    : "Rejected"}
-              </h2>
+              <div className="text-4xl mb-3">⌛</div>
+              <h2 className="text-2xl font-semibold mb-2">Final Overview</h2>
               <p className="text-muted-foreground font-mono text-sm">{claimId}</p>
-              {decision === "pending_review" && (
-                <p className="text-muted-foreground mt-2 text-sm">
-                  Forwarded to a senior adjuster for manual review.
-                </p>
-              )}
+              <p className="text-muted-foreground mt-2 text-sm">
+                Submitted to the claims adjuster for final approval.
+              </p>
             </Card>
 
             {assessment && (
               <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Final Summary</h2>
+                <h2 className="text-xl font-semibold mb-4">Claim Summary</h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
                   <div className="rounded border p-3">
