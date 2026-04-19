@@ -865,10 +865,73 @@ export function ClaimsCopilot() {
               const total = partsTotal + laborTotal + damagesTotal;
               return (
                 <Card className="p-6">
-                  <h2 className="text-xl font-semibold mb-1">Estimate</h2>
+                  <h2 className="text-xl font-semibold mb-1">Cost Estimate Validation</h2>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Step 4 of 5 — Review and edit the cost breakdown
+                    Step 4 of 5 — Review and edit each damage marker, parts, and labor line
                   </p>
+
+                  {/* Damage markers as editable line items */}
+                  <div className="mb-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium text-sm">Damage Markers</h3>
+                      <span className="text-xs text-muted-foreground">{assessment.damages.length} item{assessment.damages.length === 1 ? "" : "s"}</span>
+                    </div>
+                    {assessment.damages.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">No damage markers recorded.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {assessment.damages.map((d, i) => (
+                          <div key={i} className="flex items-center gap-2 p-2 rounded border">
+                            <span
+                              className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
+                                d.severity === "High"
+                                  ? "bg-destructive text-destructive-foreground"
+                                  : d.severity === "Medium"
+                                    ? "bg-amber-500 text-white"
+                                    : "bg-emerald-500 text-white"
+                              }`}
+                            >
+                              {i + 1}
+                            </span>
+                            <Input
+                              value={d.location}
+                              onChange={(e) => updateDamage(i, { location: e.target.value })}
+                              className="flex-1 min-w-0"
+                              placeholder="Location"
+                            />
+                            <Badge
+                              variant={
+                                d.severity === "High"
+                                  ? "destructive"
+                                  : d.severity === "Medium"
+                                    ? "default"
+                                    : "secondary"
+                              }
+                              className="hidden sm:inline-flex"
+                            >
+                              {d.severity}
+                            </Badge>
+                            <div className="flex items-center">
+                              <span className="text-sm text-muted-foreground mr-1">$</span>
+                              <Input
+                                type="number"
+                                value={d.cost ?? 0}
+                                onChange={(e) => updateDamage(i, { cost: Number(e.target.value) || 0 })}
+                                className="w-24 text-right font-mono"
+                              />
+                            </div>
+                            <button
+                              onClick={() => removeDamage(i)}
+                              className="text-muted-foreground hover:text-destructive text-sm px-2"
+                              aria-label="Remove damage"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {(["Parts", "Labor"] as const).map((cat) => {
                     const lines = estimateLines
