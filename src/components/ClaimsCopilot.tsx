@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { DamageAnnotator } from "./DamageAnnotator";
 import { ExplainChat } from "./ExplainChat";
+import { RepairCatalogSearch, type CatalogItem } from "./RepairCatalogSearch";
 import demoImg1 from "@/assets/demo-damage-1.jpg";
 import demoImg2 from "@/assets/demo-damage-2.jpg";
 
@@ -127,6 +128,41 @@ export function ClaimsCopilot() {
   const [estimateDamages, setEstimateDamages] = useState<Damage[]>([]);
   // Whether the agent has chosen to manually edit AI-recommended repair costs.
   const [manualRepairEdit, setManualRepairEdit] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+
+  const addFromCatalog = (it: CatalogItem) => {
+    if (it.category === "Damage") {
+      setEstimateDamages((prev) => [
+        ...prev,
+        {
+          location: it.name,
+          type: "Other",
+          severity: "Medium",
+          description: it.note ?? "Added from catalog",
+          cost: it.cost,
+        },
+      ]);
+    } else {
+      const cat: "Parts" | "Labor" = it.category;
+      setEstimateLines((prev) => [
+        ...prev,
+        { item: it.name, category: cat, cost: it.cost },
+      ]);
+    }
+    toast.success(`Added "${it.name}" — $${it.cost.toLocaleString()}`);
+  };
+
+  // ⌘K / Ctrl+K opens the catalog while on the estimate step
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCatalogOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   // Simulated claims-adjuster outcome on the Final Overview screen.
   const [adjusterDecision, setAdjusterDecision] = useState<"approved" | "rejected" | null>(null);
   const [repairRequestId, setRepairRequestId] = useState<string | null>(null);
@@ -908,16 +944,40 @@ export function ClaimsCopilot() {
                 <Card className="p-6">
                   <div className="flex items-start justify-between gap-3 mb-1">
                     <h2 className="text-xl font-semibold">Cost Estimate Validation</h2>
-                    <Button
-                      size="sm"
-                      variant={manualRepairEdit ? "default" : "outline"}
-                      onClick={() => setManualRepairEdit((v) => !v)}
-                    >
-                      {manualRepairEdit ? "Done editing manually" : "Review repair costs manually"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setManualRepairEdit(true);
+                          setCatalogOpen(true);
+                        }}
+                      >
+                        🔎 Search catalog
+                        <kbd className="ml-2 hidden sm:inline-flex h-4 items-center rounded border bg-muted px-1 text-[10px] font-mono">⌘K</kbd>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={manualRepairEdit ? "default" : "outline"}
+                        onClick={() => setManualRepairEdit((v) => !v)}
+                      >
+                        {manualRepairEdit ? "Done editing manually" : "Review repair costs manually"}
+                      </Button>
+                    </div>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Step 3 of 4 — Review and edit each damage marker, parts, and labor line. Removing a damage here will not erase it from the final damage report.
+                    Step 3 of 4 — Review and edit each damage marker, parts, and labor line. Use{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setManualRepairEdit(true);
+                        setCatalogOpen(true);
+                      }}
+                      className="underline hover:text-foreground"
+                    >
+                      Search catalog
+                    </button>{" "}
+                    to add real-world priced parts, labor, or damage packages. Removing a damage here will not erase it from the final damage report.
                   </p>
 
                   {/* Damage markers as editable line items (independent copy) */}
@@ -997,12 +1057,21 @@ export function ClaimsCopilot() {
                             <h3 className="font-medium text-sm">{cat}</h3>
                             <Badge variant="secondary" className="text-[10px]">⚡ AI recommended</Badge>
                           </div>
-                          <button
-                            onClick={() => addLine(cat)}
-                            className="text-xs text-muted-foreground hover:text-foreground"
-                          >
-                            + Add line
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setCatalogOpen(true)}
+                              className="text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              🔎 Search catalog
+                            </button>
+                            <span className="text-xs text-muted-foreground">·</span>
+                            <button
+                              onClick={() => addLine(cat)}
+                              className="text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              + Add blank
+                            </button>
+                          </div>
                         </div>
                         {lines.length === 0 && (
                           <p className="text-xs text-muted-foreground italic">No {cat.toLowerCase()} items.</p>
@@ -1375,6 +1444,12 @@ export function ClaimsCopilot() {
           }}
         />
       )}
+
+      <RepairCatalogSearch
+        open={catalogOpen}
+        onOpenChange={setCatalogOpen}
+        onPick={addFromCatalog}
+      />
     </div>
   );
 }
