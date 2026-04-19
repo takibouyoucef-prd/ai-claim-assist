@@ -514,8 +514,8 @@ export function ClaimsCopilot() {
 
         {step === "intake" && (
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-1">Claim Intake</h2>
-            <p className="text-sm text-muted-foreground mb-6">Step 1 of 5 — Basic information</p>
+            <h2 className="text-xl font-semibold mb-1">Create Claim</h2>
+            <p className="text-sm text-muted-foreground mb-6">Step 1 of 4 — Claim details and damage media</p>
             <form onSubmit={submitIntake} className="space-y-4">
               <div>
                 <Label>Claim ID</Label>
@@ -544,154 +544,140 @@ export function ClaimsCopilot() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe what happened..."
-                  rows={5}
+                  rows={4}
                   className="mt-1.5"
                 />
               </div>
-              <div className="flex justify-end">
-                <Button type="submit">Continue</Button>
+
+              <div className="border-t pt-5">
+                <h3 className="font-medium mb-1">Damage Media</h3>
+                <p className="text-sm text-muted-foreground mb-4">Add damage photos and (optionally) one video</p>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="mb-1.5 block">Images</Label>
+                    <label className="block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => handleImages(e.target.files)}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Click to select images (multiple allowed)
+                      </p>
+                    </label>
+                  </div>
+
+                  <div>
+                    <Label className="mb-1.5 block">Video (optional)</Label>
+                    <label className="block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50">
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => handleVideo(e.target.files)}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        {extracting ? "Extracting key frames..." : "Click to select one video file"}
+                      </p>
+                    </label>
+                  </div>
+                </div>
+
+                {(images.length > 0 || video) && (
+                  <div className="mt-5 space-y-5">
+                    <div className="flex items-center gap-2">
+                      <Badge>Media Uploaded</Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {images.length} image{images.length === 1 ? "" : "s"}
+                        {video ? ` · 1 video (${video.frames.length} key frames)` : ""}
+                      </span>
+                    </div>
+
+                    {images.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Images</h4>
+                        <div className="grid grid-cols-4 gap-3">
+                          {images.map((m, i) => (
+                            <div
+                              key={i}
+                              className="relative aspect-square rounded-md overflow-hidden bg-muted"
+                            >
+                              <img
+                                src={m.dataUrl}
+                                alt={m.name}
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setImages((prev) => prev.filter((_, idx) => idx !== i))
+                                }
+                                className="absolute top-1 right-1 bg-background/80 rounded px-1.5 text-xs"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {video && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-medium">
+                            Video key frames —{" "}
+                            <span className="text-muted-foreground font-normal">{video.name}</span>
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => setVideo(null)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Remove video
+                          </button>
+                        </div>
+                        {video.frames.length > 0 ? (
+                          <div className="grid grid-cols-3 gap-3">
+                            {video.frames.map((src, i) => (
+                              <div
+                                key={i}
+                                className="relative aspect-video rounded-md overflow-hidden bg-muted border"
+                              >
+                                <img
+                                  src={src}
+                                  alt={`Frame ${i + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                                <span className="absolute bottom-1 left-1 bg-background/80 rounded px-1.5 text-[10px] font-mono">
+                                  Frame {i + 1}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            Could not extract frames from this video.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button type="submit" disabled={extracting}>
+                  Run AI Assessment
+                </Button>
               </div>
             </form>
           </Card>
         )}
 
-        {step === "upload" && (
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-1">Upload Media</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Step 2 of 5 — Add damage photos and (optionally) one video
-            </p>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* Images uploader */}
-              <div>
-                <Label className="mb-1.5 block">Images</Label>
-                <label className="block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => handleImages(e.target.files)}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Click to select images (multiple allowed)
-                  </p>
-                </label>
-              </div>
-
-              {/* Video uploader */}
-              <div>
-                <Label className="mb-1.5 block">Video (optional)</Label>
-                <label className="block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50">
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={(e) => handleVideo(e.target.files)}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    {extracting ? "Extracting key frames..." : "Click to select one video file"}
-                  </p>
-                </label>
-              </div>
-            </div>
-
-            {(images.length > 0 || video) && (
-              <div className="mt-6 space-y-5">
-                <div className="flex items-center gap-2">
-                  <Badge>Media Uploaded</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {images.length} image{images.length === 1 ? "" : "s"}
-                    {video ? ` · 1 video (${video.frames.length} key frames)` : ""}
-                  </span>
-                </div>
-
-                {images.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Images</h3>
-                    <div className="grid grid-cols-4 gap-3">
-                      {images.map((m, i) => (
-                        <div
-                          key={i}
-                          className="relative aspect-square rounded-md overflow-hidden bg-muted"
-                        >
-                          <img
-                            src={m.dataUrl}
-                            alt={m.name}
-                            className="w-full h-full object-cover"
-                          />
-                          <button
-                            onClick={() =>
-                              setImages((prev) => prev.filter((_, idx) => idx !== i))
-                            }
-                            className="absolute top-1 right-1 bg-background/80 rounded px-1.5 text-xs"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {video && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-medium">
-                        Video key frames —{" "}
-                        <span className="text-muted-foreground font-normal">{video.name}</span>
-                      </h3>
-                      <button
-                        onClick={() => setVideo(null)}
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        Remove video
-                      </button>
-                    </div>
-                    {video.frames.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-3">
-                        {video.frames.map((src, i) => (
-                          <div
-                            key={i}
-                            className="relative aspect-video rounded-md overflow-hidden bg-muted border"
-                          >
-                            <img
-                              src={src}
-                              alt={`Frame ${i + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                            <span className="absolute bottom-1 left-1 bg-background/80 rounded px-1.5 text-[10px] font-mono">
-                              Frame {i + 1}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Could not extract frames from this video.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="flex justify-between mt-6">
-              <Button variant="outline" onClick={() => setStep("intake")}>
-                Back
-              </Button>
-              <Button
-                onClick={runAssessment}
-                disabled={images.length === 0 && !video}
-              >
-                Run AI Assessment
-              </Button>
-            </div>
-          </Card>
-        )}
-
-        {step === "processing" && loading && (
           <Card className="p-8">
             <h2 className="text-xl font-semibold mb-1">AI Processing</h2>
             <p className="text-sm text-muted-foreground mb-6">
