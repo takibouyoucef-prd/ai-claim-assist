@@ -1228,11 +1228,11 @@ function Stepper({
 }) {
   // 5-stage workflow.
   const stages = [
-    { key: "created", label: "Claim Created" },
-    { key: "media", label: "Media Uploaded" },
-    { key: "assessed", label: "Damage Validated" },
+    { key: "created", label: "Create Claim" },
+    { key: "media", label: "Upload Media" },
+    { key: "assessed", label: "Review Damage" },
     { key: "estimate", label: "Cost Estimate" },
-    { key: "final", label: "Final Overview" },
+    { key: "final", label: "Track Claim Status" },
   ];
 
   // Determine which stage is currently active.
