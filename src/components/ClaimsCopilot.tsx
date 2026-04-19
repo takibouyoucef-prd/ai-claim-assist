@@ -1045,12 +1045,21 @@ export function ClaimsCopilot() {
                             <h3 className="font-medium text-sm">{cat}</h3>
                             <Badge variant="secondary" className="text-[10px]">⚡ AI recommended</Badge>
                           </div>
-                          <button
-                            onClick={() => addLine(cat)}
-                            className="text-xs text-muted-foreground hover:text-foreground"
-                          >
-                            + Add line
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setCatalogOpen(true)}
+                              className="text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              🔎 Search catalog
+                            </button>
+                            <span className="text-xs text-muted-foreground">·</span>
+                            <button
+                              onClick={() => addLine(cat)}
+                              className="text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              + Add blank
+                            </button>
+                          </div>
                         </div>
                         {lines.length === 0 && (
                           <p className="text-xs text-muted-foreground italic">No {cat.toLowerCase()} items.</p>
