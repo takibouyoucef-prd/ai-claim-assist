@@ -232,10 +232,14 @@ export function ClaimsCopilot() {
   const submitIntake = (e: React.FormEvent) => {
     e.preventDefault();
     if (!vehicleType || !description.trim()) {
-      toast.error("Please fill out all fields");
+      toast.error("Please fill out claim details");
       return;
     }
-    setStep("upload");
+    if (images.length === 0 && !video) {
+      toast.error("Please upload at least one photo or video");
+      return;
+    }
+    runAssessment();
   };
 
   const handleImages = async (files: FileList | null) => {
