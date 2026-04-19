@@ -192,6 +192,8 @@ export function ClaimsCopilot() {
 
   const startClaim = () => {
     setClaimId(generateClaimId());
+    setClient(generateClient());
+    setPolicy(generatePolicy());
     setVehicleType("");
     setDescription("");
     setImages([]);
