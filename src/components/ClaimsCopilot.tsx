@@ -122,6 +122,11 @@ export function ClaimsCopilot() {
     { label: "Estimating cost", status: "pending" },
   ]);
   const [estimateLines, setEstimateLines] = useState<EstimateLine[]>([]);
+  // Independent copy of damages used in the cost estimate. Removing damages here
+  // does NOT affect the canonical damage report shown in the final overview.
+  const [estimateDamages, setEstimateDamages] = useState<Damage[]>([]);
+  // Whether the agent has chosen to manually edit AI-recommended repair costs.
+  const [manualRepairEdit, setManualRepairEdit] = useState(false);
 
   const startClaim = () => {
     setClaimId(generateClaimId());
