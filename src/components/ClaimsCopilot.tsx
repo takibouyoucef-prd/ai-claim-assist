@@ -733,14 +733,14 @@ export function ClaimsCopilot() {
           </Card>
         )}
 
-        {(step === "report" || step === "estimate" || step === "review") && assessment && (
+        {step === "report" && assessment && (
           <div className="space-y-4">
-            {/* Damage Report card — always visible from report step onward */}
+            {/* Damage Validation & Preview */}
             <Card className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h2 className="text-xl font-semibold">AI Assessment</h2>
-                  <p className="text-sm text-muted-foreground">Step 3 of 5 — Damage report</p>
+                  <h2 className="text-xl font-semibold">Damage Validation &amp; Preview</h2>
+                  <p className="text-sm text-muted-foreground">Step 3 of 5 — Review AI-detected damage and validate media coverage</p>
                 </div>
                 <Badge variant="outline">Confidence: {assessment.confidence}%</Badge>
               </div>
@@ -791,7 +791,43 @@ export function ClaimsCopilot() {
                 </div>
               </div>
 
-              <h3 className="font-medium mt-6 mb-3 text-sm">Damage Preview & Annotations</h3>
+              {/* Unhappy-path media validation: actionable CTAs per recommendation */}
+              {assessment.mediaValidation.status !== "Sufficient coverage" && (
+                <div className="mt-5 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge variant="default" className="bg-amber-500 hover:bg-amber-500">Action needed</Badge>
+                    <h3 className="text-sm font-medium">Media coverage recommendations</h3>
+                  </div>
+                  <ul className="space-y-2">
+                    {[
+                      { label: "Request additional photos from the policyholder", action: "request-photos" },
+                      { label: "Upload more images now", action: "upload-more" },
+                      { label: "Schedule an in-person inspection", action: "schedule-inspection" },
+                    ].map((rec) => (
+                      <li key={rec.action} className="flex items-center justify-between gap-3 text-sm bg-background rounded-md border p-2.5">
+                        <span>{rec.label}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (rec.action === "upload-more") {
+                              setStep("upload");
+                            } else if (rec.action === "request-photos") {
+                              toast.success("Photo request sent to policyholder");
+                            } else {
+                              toast.success("Inspection scheduling request created");
+                            }
+                          }}
+                        >
+                          {rec.action === "upload-more" ? "Upload" : rec.action === "request-photos" ? "Send request" : "Schedule"}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <h3 className="font-medium mt-6 mb-3 text-sm">Damage Preview &amp; Annotations</h3>
               <DamageAnnotator
                 previews={[
                   ...images.map((m, i) => ({ src: m.dataUrl, label: `Image ${i + 1}` })),
@@ -806,15 +842,16 @@ export function ClaimsCopilot() {
                 onRemove={removeDamage}
               />
 
-              {step === "report" && (
-                <div className="flex justify-end mt-6">
-                  <Button onClick={generateEstimate}>Generate Estimate</Button>
-                </div>
-              )}
+              <div className="flex justify-end mt-6">
+                <Button onClick={generateEstimate}>Continue to Cost Estimate</Button>
+              </div>
             </Card>
+          </div>
+        )}
 
-            {/* Editable Estimate card — only after Generate Estimate is clicked */}
-            {(step === "estimate" || step === "review") && (() => {
+        {step === "estimate" && assessment && (
+          <div className="space-y-4">
+            {(() => {
               const partsTotal = estimateLines
                 .filter((l) => l.category === "Parts")
                 .reduce((s, l) => s + (Number(l.cost) || 0), 0);
