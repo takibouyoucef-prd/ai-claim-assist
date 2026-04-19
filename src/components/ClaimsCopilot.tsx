@@ -1074,43 +1074,51 @@ export function ClaimsCopilot() {
             })()}
 
             {/* Recommended Next Steps — visible from report onward */}
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-1">Recommended Next Steps</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Based on AI confidence, fraud signals, and media coverage
-              </p>
-              <ul className="space-y-2">
-                {getNextSteps().map((s, i) => (
-                  <li
-                    key={i}
-                    className={`flex items-start gap-2 p-3 rounded border text-sm ${
-                      s.tone === "danger"
-                        ? "border-destructive/40 bg-destructive/5"
-                        : s.tone === "warn"
-                          ? "border-amber-500/40 bg-amber-500/5"
-                          : s.tone === "good"
-                            ? "border-emerald-500/40 bg-emerald-500/5"
-                            : "border-border"
-                    }`}
-                  >
-                    <span
-                      className={`mt-0.5 ${
-                        s.tone === "danger"
-                          ? "text-destructive"
-                          : s.tone === "warn"
-                            ? "text-amber-600"
-                            : s.tone === "good"
-                              ? "text-emerald-600"
-                              : "text-muted-foreground"
-                      }`}
-                    >
-                      ●
-                    </span>
-                    <span>{s.label}</span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
+            {(() => {
+              const partsTotal = estimateLines.filter((l) => l.category === "Parts").reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const laborTotal = estimateLines.filter((l) => l.category === "Labor").reduce((s, l) => s + (Number(l.cost) || 0), 0);
+              const damagesTotal = estimateDamages.reduce((s, d) => s + (Number(d.cost) || 0), 0);
+              const total = partsTotal + laborTotal + damagesTotal;
+              return (
+                <Card className="p-6">
+                  <h2 className="text-xl font-semibold mb-1">Recommended Next Steps</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Based on AI confidence, fraud signals, media coverage, and the validated total estimate of <span className="font-mono font-medium text-foreground">${total.toLocaleString()}</span>
+                  </p>
+                  <ul className="space-y-2">
+                    {getNextSteps(total).map((s, i) => (
+                      <li
+                        key={i}
+                        className={`flex items-start gap-2 p-3 rounded border text-sm ${
+                          s.tone === "danger"
+                            ? "border-destructive/40 bg-destructive/5"
+                            : s.tone === "warn"
+                              ? "border-amber-500/40 bg-amber-500/5"
+                              : s.tone === "good"
+                                ? "border-emerald-500/40 bg-emerald-500/5"
+                                : "border-border"
+                        }`}
+                      >
+                        <span
+                          className={`mt-0.5 ${
+                            s.tone === "danger"
+                              ? "text-destructive"
+                              : s.tone === "warn"
+                                ? "text-amber-600"
+                                : s.tone === "good"
+                                  ? "text-emerald-600"
+                                  : "text-muted-foreground"
+                          }`}
+                        >
+                          ●
+                        </span>
+                        <span>{s.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              );
+            })()}
 
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-1">Submit for Final Approval</h2>
