@@ -1226,44 +1226,31 @@ function Stepper({
   hasEstimate: boolean;
   decision: "approved" | "rejected" | "pending_review" | null;
 }) {
-  // 6-stage workflow. The final stage label changes based on the agent's decision.
-  const finalLabel =
-    decision === "approved"
-      ? "Approved"
-      : decision === "pending_review"
-        ? "Pending Review"
-        : decision === "rejected"
-          ? "Rejected"
-          : "Approved / Pending Review";
-
+  // 5-stage workflow.
   const stages = [
     { key: "created", label: "Claim Created" },
     { key: "media", label: "Media Uploaded" },
-    { key: "assessed", label: "AI Assessed" },
-    { key: "estimate", label: "Estimate Generated" },
-    { key: "reviewed", label: "Reviewed" },
-    { key: "final", label: finalLabel },
+    { key: "assessed", label: "Damage Validated" },
+    { key: "estimate", label: "Cost Estimate" },
+    { key: "final", label: "Final Overview" },
   ];
 
   // Determine which stage is currently active.
   let activeIndex = 0;
   if (step === "intake") activeIndex = 0;
-  else if (step === "upload") activeIndex = hasMedia ? 1 : 1;
+  else if (step === "upload") activeIndex = 1;
   else if (step === "processing") activeIndex = 2;
   else if (step === "report") activeIndex = 2;
-  else if (step === "estimate") activeIndex = hasEstimate ? 3 : 3;
-  else if (step === "review") activeIndex = 4;
-  else if (step === "done") activeIndex = 5;
+  else if (step === "estimate" || step === "review") activeIndex = 3;
+  else if (step === "done") activeIndex = 4;
 
-  // Determine completion: a stage is "done" if its prerequisite data exists
-  // OR the workflow has progressed past it.
+  // A stage is done if the workflow has progressed past it.
   const isDone = (i: number) => {
-    if (step === "done" && i < 5) return true;
+    if (step === "done" && i < 4) return true;
     if (i === 0) return step !== "intake";
     if (i === 1) return hasMedia && (step === "processing" || step === "report" || step === "estimate" || step === "review" || step === "done");
-    if (i === 2) return hasAssessment && (step === "report" || step === "estimate" || step === "review" || step === "done");
-    if (i === 3) return hasEstimate && (step === "estimate" || step === "review" || step === "done");
-    if (i === 4) return step === "review" || step === "done";
+    if (i === 2) return hasAssessment && (step === "estimate" || step === "review" || step === "done");
+    if (i === 3) return hasEstimate && step === "done";
     return false;
   };
 
@@ -1273,17 +1260,13 @@ function Stepper({
         {stages.map((s, i) => {
           const done = isDone(i);
           const current = i === activeIndex && step !== "done";
-          const isFinalDone = i === 5 && step === "done";
+          const isFinalDone = i === 4 && step === "done";
           return (
             <div key={s.key} className="flex items-center gap-2 flex-1 min-w-[120px]">
               <div
                 className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium shrink-0 ${
                   isFinalDone
-                    ? decision === "approved"
-                      ? "bg-emerald-600 text-white"
-                      : decision === "pending_review"
-                        ? "bg-amber-500 text-white"
-                        : "bg-destructive text-destructive-foreground"
+                    ? "bg-amber-500 text-white"
                     : done
                       ? "bg-primary text-primary-foreground"
                       : current
@@ -1303,6 +1286,10 @@ function Stepper({
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
       </div>
     </div>
   );
