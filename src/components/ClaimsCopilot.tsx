@@ -1444,6 +1444,12 @@ export function ClaimsCopilot() {
           }}
         />
       )}
+
+      <RepairCatalogSearch
+        open={catalogOpen}
+        onOpenChange={setCatalogOpen}
+        onPick={addFromCatalog}
+      />
     </div>
   );
 }
