@@ -731,7 +731,7 @@ export function ClaimsCopilot() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h2 className="text-xl font-semibold">Damage Validation &amp; Preview</h2>
-                  <p className="text-sm text-muted-foreground">Step 3 of 4 — Review AI-detected damage and validate media coverage</p>
+                  <p className="text-sm text-muted-foreground">Step 2 of 4 — Review AI-detected damage and validate media coverage</p>
                 </div>
                 <Badge variant="outline">Confidence: {assessment.confidence}%</Badge>
               </div>
