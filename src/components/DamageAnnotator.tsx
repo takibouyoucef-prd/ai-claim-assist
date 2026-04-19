@@ -108,13 +108,26 @@ export function DamageAnnotator({ previews, damages, onAdd, onUpdate, onRemove }
             </button>
           ))}
         </div>
-        <Button
-          size="sm"
-          variant={addMode ? "default" : "outline"}
-          onClick={() => setAddMode((v) => !v)}
-        >
-          {addMode ? "Click image to place…" : "+ Add damage"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setZoomLevel(2);
+              setPan({ x: 50, y: 50 });
+              setZoomOpen(true);
+            }}
+          >
+            🔍 Zoom
+          </Button>
+          <Button
+            size="sm"
+            variant={addMode ? "default" : "outline"}
+            onClick={() => setAddMode((v) => !v)}
+          >
+            {addMode ? "Click image to place…" : "+ Add damage"}
+          </Button>
+        </div>
       </div>
 
       {/* Image with markers */}
