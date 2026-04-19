@@ -1163,29 +1163,9 @@ export function ClaimsCopilot() {
                     {getNextSteps(total).map((s, i) => (
                       <li
                         key={i}
-                        className={`flex items-start gap-2 p-3 rounded border text-sm ${
-                          s.tone === "danger"
-                            ? "border-destructive/40 bg-destructive/5"
-                            : s.tone === "warn"
-                              ? "border-amber-500/40 bg-amber-500/5"
-                              : s.tone === "good"
-                                ? "border-emerald-500/40 bg-emerald-500/5"
-                                : "border-border"
-                        }`}
+                        className="flex items-start gap-2 p-3 rounded border border-border text-sm"
                       >
-                        <span
-                          className={`mt-0.5 ${
-                            s.tone === "danger"
-                              ? "text-destructive"
-                              : s.tone === "warn"
-                                ? "text-amber-600"
-                                : s.tone === "good"
-                                  ? "text-emerald-600"
-                                  : "text-muted-foreground"
-                          }`}
-                        >
-                          ●
-                        </span>
+                        <span className="mt-0.5 text-muted-foreground">●</span>
                         <span>{s.label}</span>
                       </li>
                     ))}
