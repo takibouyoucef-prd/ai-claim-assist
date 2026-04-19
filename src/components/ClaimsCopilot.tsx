@@ -113,6 +113,16 @@ const generatePolicyNumber = () =>
 
 const POLICY_TYPES = ["Comprehensive", "Collision", "Full Coverage", "Liability + Collision"];
 
+const DUMMY_VEHICLES: { type: string; makeModel: string; year: number; vin: string }[] = [
+  { type: "Sedan", makeModel: "Honda Accord EX", year: 2021, vin: "1HGCV1F30MA012345" },
+  { type: "SUV", makeModel: "Toyota RAV4 XLE", year: 2022, vin: "JTMRWRFV8ND098712" },
+  { type: "Truck", makeModel: "Ford F-150 Lariat", year: 2020, vin: "1FTFW1E80LFA45123" },
+  { type: "Van", makeModel: "Chrysler Pacifica Touring", year: 2023, vin: "2C4RC1BG5PR123987" },
+  { type: "Sedan", makeModel: "Tesla Model 3", year: 2022, vin: "5YJ3E1EA7NF456321" },
+];
+
+const generateVehicle = () => DUMMY_VEHICLES[Math.floor(Math.random() * DUMMY_VEHICLES.length)];
+
 const generatePolicy = () => ({
   number: generatePolicyNumber(),
   type: POLICY_TYPES[Math.floor(Math.random() * POLICY_TYPES.length)],
@@ -132,7 +142,8 @@ export function ClaimsCopilot() {
   const [claimId, setClaimId] = useState("");
   const [client, setClient] = useState<{ name: string; email: string; phone: string } | null>(null);
   const [policy, setPolicy] = useState<{ number: string; type: string; deductible: number } | null>(null);
-  const [vehicleType, setVehicleType] = useState("");
+  const [vehicle, setVehicle] = useState<{ type: string; makeModel: string; year: number; vin: string } | null>(null);
+  const vehicleType = vehicle?.type ?? "";
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<ImageFile[]>([]);
   const [video, setVideo] = useState<VideoFile | null>(null);
@@ -194,7 +205,7 @@ export function ClaimsCopilot() {
     setClaimId(generateClaimId());
     setClient(generateClient());
     setPolicy(generatePolicy());
-    setVehicleType("");
+    setVehicle(generateVehicle());
     setDescription("");
     setImages([]);
     setVideo(null);
@@ -277,7 +288,7 @@ export function ClaimsCopilot() {
     setClaimId(generateClaimId());
     setClient({ name: "Sarah Mitchell", email: "sarah.mitchell@example.com", phone: "(415) 555-0142" });
     setPolicy({ number: "POL-4827-K9XQ", type: "Comprehensive", deductible: 500 });
-    setVehicleType("Sedan");
+    setVehicle({ type: "Sedan", makeModel: "Honda Accord EX", year: 2021, vin: "1HGCV1F30MA012345" });
     setDescription(
       "Rear-ended at low speed in a parking lot, then pushed into a concrete barrier causing front-end damage. Driver and passenger uninjured.",
     );
@@ -668,23 +679,23 @@ export function ClaimsCopilot() {
                       className="mt-1 bg-background font-mono"
                     />
                   </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Vehicle Type</Label>
+                    <Input value={vehicle?.type ?? ""} readOnly className="mt-1 bg-background" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Make & Model</Label>
+                    <Input
+                      value={vehicle ? `${vehicle.year} ${vehicle.makeModel}` : ""}
+                      readOnly
+                      className="mt-1 bg-background"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs text-muted-foreground">VIN</Label>
+                    <Input value={vehicle?.vin ?? ""} readOnly className="mt-1 bg-background font-mono" />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="vehicle">Vehicle Type</Label>
-                <Select value={vehicleType} onValueChange={setVehicleType}>
-                  <SelectTrigger id="vehicle" className="mt-1.5">
-                    <SelectValue placeholder="Select vehicle type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Sedan">Sedan</SelectItem>
-                    <SelectItem value="SUV">SUV</SelectItem>
-                    <SelectItem value="Truck">Truck</SelectItem>
-                    <SelectItem value="Van">Van</SelectItem>
-                    <SelectItem value="Motorcycle">Motorcycle</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div>
                 <Label htmlFor="desc">Incident Description</Label>
