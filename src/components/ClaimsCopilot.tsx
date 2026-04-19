@@ -288,7 +288,7 @@ export function ClaimsCopilot() {
     setClaimId(generateClaimId());
     setClient({ name: "Sarah Mitchell", email: "sarah.mitchell@example.com", phone: "(415) 555-0142" });
     setPolicy({ number: "POL-4827-K9XQ", type: "Comprehensive", deductible: 500 });
-    setVehicleType("Sedan");
+    setVehicle({ type: "Sedan", makeModel: "Honda Accord EX", year: 2021, vin: "1HGCV1F30MA012345" });
     setDescription(
       "Rear-ended at low speed in a parking lot, then pushed into a concrete barrier causing front-end damage. Driver and passenger uninjured.",
     );
