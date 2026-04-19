@@ -1217,10 +1217,9 @@ function Stepper({
   hasEstimate: boolean;
   decision: "approved" | "rejected" | "pending_review" | null;
 }) {
-  // 5-stage workflow.
+  // 4-stage workflow.
   const stages = [
     { key: "created", label: "Create Claim" },
-    { key: "media", label: "Upload Media" },
     { key: "assessed", label: "Review Damage" },
     { key: "estimate", label: "Cost Estimate" },
     { key: "final", label: "Track Claim Status" },
@@ -1229,19 +1228,16 @@ function Stepper({
   // Determine which stage is currently active.
   let activeIndex = 0;
   if (step === "intake") activeIndex = 0;
-  else if (step === "upload") activeIndex = 1;
-  else if (step === "processing") activeIndex = 2;
-  else if (step === "report") activeIndex = 2;
-  else if (step === "estimate" || step === "review") activeIndex = 3;
-  else if (step === "done") activeIndex = 4;
+  else if (step === "processing" || step === "report") activeIndex = 1;
+  else if (step === "estimate" || step === "review") activeIndex = 2;
+  else if (step === "done") activeIndex = 3;
 
   // A stage is done if the workflow has progressed past it.
   const isDone = (i: number) => {
-    if (step === "done" && i < 4) return true;
-    if (i === 0) return step !== "intake";
-    if (i === 1) return hasMedia && (step === "processing" || step === "report" || step === "estimate" || step === "review" || step === "done");
-    if (i === 2) return hasAssessment && (step === "estimate" || step === "review" || step === "done");
-    if (i === 3) return hasEstimate && step === "done";
+    if (step === "done" && i < 3) return true;
+    if (i === 0) return hasMedia && step !== "intake";
+    if (i === 1) return hasAssessment && (step === "estimate" || step === "review" || step === "done");
+    if (i === 2) return hasEstimate && step === "done";
     return false;
   };
 
@@ -1251,7 +1247,7 @@ function Stepper({
         {stages.map((s, i) => {
           const done = isDone(i);
           const current = i === activeIndex && step !== "done";
-          const isFinalDone = i === 4 && step === "done";
+          const isFinalDone = i === 3 && step === "done";
           return (
             <div key={s.key} className="flex items-center gap-2 flex-1 min-w-[120px]">
               <div
