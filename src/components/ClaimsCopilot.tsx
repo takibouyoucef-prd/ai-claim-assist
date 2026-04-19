@@ -143,9 +143,10 @@ export function ClaimsCopilot() {
         },
       ]);
     } else {
+      const cat: "Parts" | "Labor" = it.category;
       setEstimateLines((prev) => [
         ...prev,
-        { item: it.name, category: it.category, cost: it.cost },
+        { item: it.name, category: cat, cost: it.cost },
       ]);
     }
     toast.success(`Added "${it.name}" — $${it.cost.toLocaleString()}`);
