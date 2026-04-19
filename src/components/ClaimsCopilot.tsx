@@ -447,8 +447,8 @@ export function ClaimsCopilot() {
     );
   };
 
-  // Compute recommended next steps based on the current claim state.
-  const getNextSteps = (): { label: string; tone: "default" | "warn" | "danger" | "good" }[] => {
+  // Compute recommended next steps based on the current claim state and total cost.
+  const getNextSteps = (totalCost?: number): { label: string; tone: "default" | "warn" | "danger" | "good" }[] => {
     const steps: { label: string; tone: "default" | "warn" | "danger" | "good" }[] = [];
     if (!assessment) return steps;
     if (assessment.fraudRisk.level === "High") {
@@ -467,6 +467,30 @@ export function ClaimsCopilot() {
     }
     if (assessment.damages.some((d) => d.severity === "High")) {
       steps.push({ label: "High-severity damage detected — confirm parts availability", tone: "default" });
+    }
+    // Cost-based recommendations
+    if (typeof totalCost === "number" && totalCost > 0) {
+      if (totalCost >= 10000) {
+        steps.push({
+          label: `High repair cost ($${totalCost.toLocaleString()}) — require senior adjuster sign-off and second appraisal`,
+          tone: "danger",
+        });
+      } else if (totalCost >= 5000) {
+        steps.push({
+          label: `Significant estimate ($${totalCost.toLocaleString()}) — confirm parts pricing with at least one repair shop`,
+          tone: "warn",
+        });
+      } else if (totalCost < 500) {
+        steps.push({
+          label: `Low repair cost ($${totalCost.toLocaleString()}) — consider fast-track approval to reduce handling overhead`,
+          tone: "good",
+        });
+      } else {
+        steps.push({
+          label: `Estimate of $${totalCost.toLocaleString()} is within standard approval range`,
+          tone: "default",
+        });
+      }
     }
     if (step === "report") {
       steps.push({ label: "Generate the cost estimate to continue", tone: "default" });
