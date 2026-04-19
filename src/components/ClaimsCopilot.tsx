@@ -377,7 +377,17 @@ export function ClaimsCopilot() {
       labor.push({ item: "Repair labor", category: "Labor", cost: Math.round(partsTotal * 0.35) });
     }
     setEstimateLines([...parts, ...labor]);
+    // Seed an editable copy of damages for the cost estimate page.
+    setEstimateDamages(assessment.damages.map((d) => ({ ...d })));
+    setManualRepairEdit(false);
     setStep("estimate");
+  };
+
+  const updateEstimateDamage = (idx: number, patch: Partial<Damage>) => {
+    setEstimateDamages((prev) => prev.map((d, i) => (i === idx ? { ...d, ...patch } : d)));
+  };
+  const removeEstimateDamage = (idx: number) => {
+    setEstimateDamages((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const updateLine = (idx: number, patch: Partial<EstimateLine>) => {
