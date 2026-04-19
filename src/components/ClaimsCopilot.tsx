@@ -671,7 +671,7 @@ export function ClaimsCopilot() {
 
               <div className="flex justify-end pt-2">
                 <Button type="submit" disabled={extracting}>
-                  Run AI Assessment
+                  Create Claim and run AI Assessment
                 </Button>
               </div>
             </form>
