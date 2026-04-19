@@ -1192,13 +1192,6 @@ export function ClaimsCopilot() {
                       </span>
                     </div>
                   </div>
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    AI suggested ${assessment.estimatedCost.toLocaleString()} ·
-                    Recommendation:{" "}
-                    <Badge variant="outline" className="ml-1">
-                      {assessment.recommendation}
-                    </Badge>
-                  </div>
                 </Card>
               );
             })()}
