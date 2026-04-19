@@ -679,23 +679,23 @@ export function ClaimsCopilot() {
                       className="mt-1 bg-background font-mono"
                     />
                   </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Vehicle Type</Label>
+                    <Input value={vehicle?.type ?? ""} readOnly className="mt-1 bg-background" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Make & Model</Label>
+                    <Input
+                      value={vehicle ? `${vehicle.year} ${vehicle.makeModel}` : ""}
+                      readOnly
+                      className="mt-1 bg-background"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs text-muted-foreground">VIN</Label>
+                    <Input value={vehicle?.vin ?? ""} readOnly className="mt-1 bg-background font-mono" />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="vehicle">Vehicle Type</Label>
-                <Select value={vehicleType} onValueChange={setVehicleType}>
-                  <SelectTrigger id="vehicle" className="mt-1.5">
-                    <SelectValue placeholder="Select vehicle type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Sedan">Sedan</SelectItem>
-                    <SelectItem value="SUV">SUV</SelectItem>
-                    <SelectItem value="Truck">Truck</SelectItem>
-                    <SelectItem value="Van">Van</SelectItem>
-                    <SelectItem value="Motorcycle">Motorcycle</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div>
                 <Label htmlFor="desc">Incident Description</Label>
