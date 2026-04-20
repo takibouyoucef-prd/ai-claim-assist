@@ -1226,24 +1226,19 @@ export function ClaimsCopilot() {
                   </p>
                   <ul className="space-y-2">
                     {getNextSteps(total).map((s, i) => {
-                      const toneStyles: Record<typeof s.tone, string> = {
-                        good: "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100",
-                        warn: "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100",
-                        danger: "border-destructive/40 bg-destructive/10 text-destructive",
-                        default: "border-primary/30 bg-primary/5 text-foreground",
+                      const iconMap: Record<typeof s.tone, typeof CheckCircle2> = {
+                        good: CheckCircle2,
+                        warn: AlertTriangle,
+                        danger: ShieldAlert,
+                        default: Info,
                       };
-                      const dotStyles: Record<typeof s.tone, string> = {
-                        good: "text-emerald-600 dark:text-emerald-400",
-                        warn: "text-amber-600 dark:text-amber-400",
-                        danger: "text-destructive",
-                        default: "text-primary",
-                      };
+                      const Icon = iconMap[s.tone];
                       return (
                         <li
                           key={i}
-                          className={`flex items-start gap-2 p-3 rounded border text-sm ${toneStyles[s.tone]}`}
+                          className="flex items-start gap-2 p-3 rounded border border-border bg-card text-sm"
                         >
-                          <span className={`mt-0.5 ${dotStyles[s.tone]}`}>●</span>
+                          <Icon className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                           <span>{s.label}</span>
                         </li>
                       );
