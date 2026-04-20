@@ -318,6 +318,81 @@ export function ClaimsCopilot() {
     toast.success("Demo claim loaded — ready for review");
   };
 
+  const loadSuspiciousDemoClaim = () => {
+    const demoAssessment: Assessment = {
+      summary:
+        "Reported damage pattern is inconsistent with the described low-speed incident. Multiple damage zones appear to be from separate events, and rust on the rear panel suggests pre-existing damage being claimed as new.",
+      damages: [
+        {
+          location: "Front bumper",
+          type: "Crack",
+          severity: "High",
+          description: "Severe cracking inconsistent with a low-speed parking lot impact.",
+          cost: 1400,
+          imageIndex: 0,
+          x: 50,
+          y: 60,
+        },
+        {
+          location: "Rear quarter panel",
+          type: "Paint Damage",
+          severity: "High",
+          description: "Pre-existing rust visible under paint damage; not consistent with reported date of loss.",
+          cost: 900,
+          imageIndex: 1,
+          x: 40,
+          y: 55,
+        },
+      ],
+      estimatedCost: 3800,
+      lineItems: [
+        { item: "Front bumper replacement", cost: 1400 },
+        { item: "Rear quarter panel respray", cost: 900 },
+        { item: "Labor (12 hours)", cost: 1080 },
+        { item: "Misc parts", cost: 420 },
+      ],
+      mediaValidation: {
+        status: "Insufficient",
+        notes: "Lighting inconsistencies between photos suggest images taken on different days; no wide-angle context shots.",
+      },
+      fraudRisk: {
+        level: "High",
+        reason: "Damage inconsistent with reported incident, pre-existing rust under claimed damage, and prior similar claim filed 4 months ago on same policy.",
+      },
+      recommendation: "Deny",
+      confidence: 34,
+    };
+
+    setClaimId(generateClaimId());
+    setClient({ name: "Marcus Reed", email: "m.reed.claims@example.com", phone: "(415) 555-0188" });
+    setPolicy({ number: "POL-9921-X3RT", type: "Comprehensive", deductible: 500 });
+    setVehicle({ type: "Sedan", makeModel: "Toyota Camry LE", year: 2017, vin: "4T1BF1FK0HU332211" });
+    setDescription(
+      "Backed into a shopping cart in a parking lot at 5 mph. Minor damage only.",
+    );
+    setImages([
+      { name: "front-damage.jpg", dataUrl: demoImg1 },
+      { name: "rear-damage.jpg", dataUrl: demoImg2 },
+    ]);
+    setVideo(null);
+    setAssessment(demoAssessment);
+    setDecision(null);
+    setEstimateLines([
+      { item: "Front bumper replacement", category: "Parts", cost: 1400 },
+      { item: "Rear quarter panel respray", category: "Parts", cost: 900 },
+      { item: "Misc parts", category: "Parts", cost: 420 },
+      { item: "Labor (12 hours)", category: "Labor", cost: 1080 },
+    ]);
+    setEstimateDamages(demoAssessment.damages.map((d) => ({ ...d })));
+    setProcessingSteps([
+      { label: "Validating media", status: "done" },
+      { label: "Detecting damage", status: "done" },
+      { label: "Estimating cost", status: "done" },
+    ]);
+    setStep("estimate");
+    toast.warning("Suspicious claim loaded — review fraud signals");
+  };
+
   const submitIntake = (e: React.FormEvent) => {
     e.preventDefault();
     if (!vehicleType || !description.trim()) {
