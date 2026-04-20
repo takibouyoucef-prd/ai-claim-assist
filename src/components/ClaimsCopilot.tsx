@@ -13,6 +13,7 @@ import { ExplainChat } from "./ExplainChat";
 import { RepairCatalogSearch, type CatalogItem } from "./RepairCatalogSearch";
 import demoImg1 from "@/assets/demo-damage-1.jpg";
 import demoImg2 from "@/assets/demo-damage-2.jpg";
+import claimPilotLogo from "@/assets/claimpilot-logo.png";
 
 type Step = "start" | "intake" | "upload" | "processing" | "report" | "estimate" | "review" | "done";
 
@@ -589,7 +590,21 @@ export function ClaimsCopilot() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b">
         <div className="mx-auto max-w-4xl px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold">AI Claims Copilot</h1>
+          <div className="flex items-center gap-2.5">
+            <img
+              src={claimPilotLogo}
+              alt="ClaimPilot logo"
+              width={32}
+              height={32}
+              className="h-8 w-8"
+            />
+            <div className="flex items-baseline gap-1.5 leading-none">
+              <span className="text-lg font-semibold tracking-tight">ClaimPilot</span>
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                by ScaleAI
+              </span>
+            </div>
+          </div>
           {step !== "start" && (
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <span className="font-mono">{claimId}</span>
@@ -615,8 +630,8 @@ export function ClaimsCopilot() {
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <h2 className="text-3xl font-bold mb-3">Process insurance claims faster</h2>
             <p className="text-muted-foreground mb-8 max-w-md">
-              Intake a claim, upload damage photos, and let AI generate an assessment and estimate
-              for your review.
+              ClaimPilot intakes a claim, ingests damage photos, and generates an AI assessment and
+              estimate for your review.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button size="lg" onClick={startClaim}>

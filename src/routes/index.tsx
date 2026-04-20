@@ -4,8 +4,8 @@ import { ClaimsCopilot } from "@/components/ClaimsCopilot";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "AI Claims Copilot" },
-      { name: "description", content: "AI-assisted insurance claim intake, assessment, and estimation." },
+      { title: "ClaimPilot by ScaleAI" },
+      { name: "description", content: "ClaimPilot by ScaleAI — AI-assisted insurance claim intake, assessment, and estimation." },
     ],
   }),
   component: () => <ClaimsCopilot />,
