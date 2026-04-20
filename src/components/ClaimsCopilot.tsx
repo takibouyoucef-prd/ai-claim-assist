@@ -630,8 +630,8 @@ export function ClaimsCopilot() {
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <h2 className="text-3xl font-bold mb-3">Process insurance claims faster</h2>
             <p className="text-muted-foreground mb-8 max-w-md">
-              Intake a claim, upload damage photos, and let AI generate an assessment and estimate
-              for your review.
+              ClaimPilot intakes a claim, ingests damage photos, and generates an AI assessment and
+              estimate for your review.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button size="lg" onClick={startClaim}>
