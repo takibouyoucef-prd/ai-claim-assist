@@ -14,6 +14,7 @@ import { RepairCatalogSearch, type CatalogItem } from "./RepairCatalogSearch";
 import demoImg1 from "@/assets/demo-damage-1.jpg";
 import demoImg2 from "@/assets/demo-damage-2.jpg";
 import claimPilotLogo from "@/assets/claimpilot-logo.png?url";
+import { CheckCircle2, AlertTriangle, ShieldAlert, Info } from "lucide-react";
 
 type Step = "start" | "intake" | "upload" | "processing" | "report" | "estimate" | "review" | "done";
 
