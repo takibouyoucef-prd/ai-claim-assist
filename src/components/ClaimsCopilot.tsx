@@ -582,7 +582,8 @@ export function ClaimsCopilot() {
       steps.push({ label: "Generate the cost estimate to continue", tone: "default" });
     }
     if (step === "estimate" || step === "review") {
-      if (assessment.fraudRisk.level !== "High" && assessment.confidence >= 70) {
+      const hasBlocker = steps.some((s) => s.tone === "danger");
+      if (!hasBlocker && assessment.fraudRisk.level !== "High" && assessment.confidence >= 70) {
         steps.push({ label: "Approve estimate and finalize claim", tone: "good" });
       }
     }
