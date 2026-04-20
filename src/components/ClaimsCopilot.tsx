@@ -1224,15 +1224,29 @@ export function ClaimsCopilot() {
                     Based on AI confidence, fraud signals, media coverage, and the validated total estimate of <span className="font-mono font-medium text-foreground">${total.toLocaleString()}</span>
                   </p>
                   <ul className="space-y-2">
-                    {getNextSteps(total).map((s, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-2 p-3 rounded border border-border text-sm"
-                      >
-                        <span className="mt-0.5 text-muted-foreground">●</span>
-                        <span>{s.label}</span>
-                      </li>
-                    ))}
+                    {getNextSteps(total).map((s, i) => {
+                      const toneStyles: Record<typeof s.tone, string> = {
+                        good: "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100",
+                        warn: "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100",
+                        danger: "border-destructive/40 bg-destructive/10 text-destructive",
+                        default: "border-primary/30 bg-primary/5 text-foreground",
+                      };
+                      const dotStyles: Record<typeof s.tone, string> = {
+                        good: "text-emerald-600 dark:text-emerald-400",
+                        warn: "text-amber-600 dark:text-amber-400",
+                        danger: "text-destructive",
+                        default: "text-primary",
+                      };
+                      return (
+                        <li
+                          key={i}
+                          className={`flex items-start gap-2 p-3 rounded border text-sm ${toneStyles[s.tone]}`}
+                        >
+                          <span className={`mt-0.5 ${dotStyles[s.tone]}`}>●</span>
+                          <span>{s.label}</span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </Card>
               );
