@@ -533,11 +533,16 @@ export function ClaimsCopilot() {
     const steps: { label: string; tone: "default" | "warn" | "danger" | "good" }[] = [];
     if (!assessment) return steps;
     if (assessment.fraudRisk.level === "High") {
-      steps.push({ label: "Potential fraud — escalate to SIU before approving", tone: "danger" });
+      steps.push({ label: "Do not approve — escalate to SIU for fraud investigation before any payout", tone: "danger" });
     } else if (assessment.fraudRisk.level === "Medium") {
       steps.push({ label: "Medium fraud risk — verify policy details and incident report", tone: "warn" });
     }
-    if (assessment.confidence < 70) {
+    if (assessment.confidence < 40) {
+      steps.push({
+        label: `Do not approve — AI confidence too low (${assessment.confidence}%) to support a decision; require manual inspection`,
+        tone: "danger",
+      });
+    } else if (assessment.confidence < 70) {
       steps.push({
         label: `Low AI confidence (${assessment.confidence}%) — escalate or request manual inspection`,
         tone: "warn",
