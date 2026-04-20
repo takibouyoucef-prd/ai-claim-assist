@@ -589,7 +589,21 @@ export function ClaimsCopilot() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b">
         <div className="mx-auto max-w-4xl px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold">AI Claims Copilot</h1>
+          <div className="flex items-center gap-2.5">
+            <img
+              src={claimPilotLogo}
+              alt="ClaimPilot logo"
+              width={32}
+              height={32}
+              className="h-8 w-8"
+            />
+            <div className="flex items-baseline gap-1.5 leading-none">
+              <span className="text-lg font-semibold tracking-tight">ClaimPilot</span>
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                by ScaleAI
+              </span>
+            </div>
+          </div>
           {step !== "start" && (
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <span className="font-mono">{claimId}</span>
