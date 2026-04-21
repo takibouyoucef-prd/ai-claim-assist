@@ -1,12 +1,13 @@
 # ClaimPilot
 
-**ClaimPilot** is an AI-powered auto insurance claims copilot by ScaleAI. It guides adjusters through the entire claim lifecycle — from intake and damage assessment to cost estimation and final decision — using AI vision and reasoning to accelerate review while keeping a human in the loop.
+**ClaimPilot** is an AI-powered auto insurance claims copilot. It guides Claim Agents through the entire claim lifecycle — from intake and damage assessment to cost estimation and final decision — using AI vision and reasoning to accelerate review while keeping a human in the loop.
+**Access it from here:**  - **Production**: https://claim-agent-app.lovable.app
 
-> Built with Lovable, TanStack Start, React 19, Tailwind CSS v4, and Lovable Cloud (Supabase + Lovable AI Gateway).
+> Built with Lovable, TanStack Start, React 19, Tailwind CSS v4, and Lovable Cloud (Supabase + Lovable AI Gateway), Gemini for the AI Models. 
 
 ---
 
-## ✨ Features
+## ✨ Features (More details in the PRD)
 
 - **Claim intake** — Capture client, policy, and vehicle info plus damage photos and video
 - **AI damage assessment** — Multimodal model analyzes media, identifies damaged parts, severity, and fraud signals
@@ -82,11 +83,11 @@ supabase/
 
 ## 🧠 How It Works
 
-1. **Intake** — Adjuster fills client, policy, vehicle info and uploads damage media.
+1. **Intake** — Claim Agent fills client, policy, vehicle info and uploads damage media.
 2. **Assessment** — `assess-claim` edge function calls the Lovable AI Gateway with a multimodal prompt; returns damaged parts, severity, fraud risk, and confidence score.
 3. **Estimate** — Damage list converts into editable repair line items priced via the catalog.
 4. **Decision** — Recommendation engine evaluates fraud risk + confidence and either suggests approval or blocks it pending SIU review.
-5. **Explain** — `explain-claim` lets the adjuster ask follow-up questions about any field in context.
+5. **Explain** — `explain-claim` lets the Claim Agent ask follow-up questions about any field in context.
 
 ---
 
@@ -106,7 +107,6 @@ The project is published via Lovable to Cloudflare Workers.
 - **Preview**: https://id-preview--75366585-65c5-4160-82a6-a977590460a4.lovable.app
 - **Production**: https://claim-agent-app.lovable.app
 
-To publish updates, click **Publish** in the Lovable editor — edge functions deploy automatically.
 
 ---
 
@@ -118,8 +118,4 @@ This repository is bidirectionally synced with [Lovable](https://lovable.dev). Y
 - Push commits to GitHub → changes auto-sync back to Lovable
 - Open PRs and use GitHub Actions normally
 
----
 
-## 📄 License
-
-© ScaleAI. All rights reserved.
