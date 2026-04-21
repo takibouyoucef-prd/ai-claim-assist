@@ -393,16 +393,24 @@ export function ClaimsCopilot() {
     toast.warning("Suspicious claim loaded — review fraud signals");
   };
 
+  const descriptionMissing = !description.trim();
+  const mediaMissing = images.length === 0 && !video;
+  const [showErrors, setShowErrors] = useState(false);
+
   const submitIntake = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vehicleType || !description.trim()) {
-      toast.error("Please fill out claim details");
+    if (descriptionMissing || mediaMissing) {
+      setShowErrors(true);
+      if (descriptionMissing && mediaMissing) {
+        toast.error("Please add an incident description and at least one photo or video");
+      } else if (descriptionMissing) {
+        toast.error("Please add an incident description");
+      } else {
+        toast.error("Please upload at least one photo or video");
+      }
       return;
     }
-    if (images.length === 0 && !video) {
-      toast.error("Please upload at least one photo or video");
-      return;
-    }
+    setShowErrors(false);
     runAssessment();
   };
 
