@@ -15,6 +15,7 @@ import demoImg1 from "@/assets/demo-damage-1.jpg";
 import demoImg2 from "@/assets/demo-damage-2.jpg";
 import claimPilotLogo from "@/assets/claimpilot-logo.png?url";
 import { CheckCircle2, AlertTriangle, ShieldAlert, Info } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Step = "start" | "intake" | "upload" | "processing" | "report" | "estimate" | "review" | "done";
 
@@ -877,6 +878,9 @@ export function ClaimsCopilot() {
                     </label>
                   </div>
                 </div>
+                {showErrors && mediaMissing && (
+                  <p className="text-xs text-destructive mt-2">At least one photo or video is required</p>
+                )}
 
                 {(images.length > 0 || video) && (
                   <div className="mt-5 space-y-5">
