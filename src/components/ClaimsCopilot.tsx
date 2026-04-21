@@ -165,6 +165,7 @@ export function ClaimsCopilot() {
   // Whether the agent has chosen to manually edit AI-recommended repair costs.
   const [manualRepairEdit, setManualRepairEdit] = useState(true);
   const [catalogOpen, setCatalogOpen] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   const addFromCatalog = (it: CatalogItem) => {
     if (it.category === "Damage") {
@@ -395,7 +396,6 @@ export function ClaimsCopilot() {
 
   const descriptionMissing = !description.trim();
   const mediaMissing = images.length === 0 && !video;
-  const [showErrors, setShowErrors] = useState(false);
 
   const submitIntake = (e: React.FormEvent) => {
     e.preventDefault();
