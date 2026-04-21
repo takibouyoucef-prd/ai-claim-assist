@@ -722,14 +722,19 @@ export function ClaimsCopilot() {
               <Button size="lg" variant="outline" onClick={loadDemoClaim}>
                 Load Demo Claim
               </Button>
-              <Button size="lg" variant="outline" onClick={loadSuspiciousDemoClaim}>
-                Load Suspicious Claim
-              </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-4">
               Demo loads a pre-filled sedan collision claim with photos, AI assessment, and estimate
               ready to review.
             </p>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={loadSuspiciousDemoClaim}
+              className="fixed bottom-4 right-4 text-xs text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100 z-50"
+            >
+              Load Suspicious Claim
+            </Button>
           </div>
         )}
 
