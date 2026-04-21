@@ -15,6 +15,7 @@ import demoImg1 from "@/assets/demo-damage-1.jpg";
 import demoImg2 from "@/assets/demo-damage-2.jpg";
 import claimPilotLogo from "@/assets/claimpilot-logo.png?url";
 import { CheckCircle2, AlertTriangle, ShieldAlert, Info } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Step = "start" | "intake" | "upload" | "processing" | "report" | "estimate" | "review" | "done";
 
@@ -165,6 +166,7 @@ export function ClaimsCopilot() {
   // Whether the agent has chosen to manually edit AI-recommended repair costs.
   const [manualRepairEdit, setManualRepairEdit] = useState(true);
   const [catalogOpen, setCatalogOpen] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   const addFromCatalog = (it: CatalogItem) => {
     if (it.category === "Damage") {
@@ -393,16 +395,23 @@ export function ClaimsCopilot() {
     toast.warning("Suspicious claim loaded — review fraud signals");
   };
 
+  const descriptionMissing = !description.trim();
+  const mediaMissing = images.length === 0 && !video;
+
   const submitIntake = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vehicleType || !description.trim()) {
-      toast.error("Please fill out claim details");
+    if (descriptionMissing || mediaMissing) {
+      setShowErrors(true);
+      if (descriptionMissing && mediaMissing) {
+        toast.error("Please add an incident description and at least one photo or video");
+      } else if (descriptionMissing) {
+        toast.error("Please add an incident description");
+      } else {
+        toast.error("Please upload at least one photo or video");
+      }
       return;
     }
-    if (images.length === 0 && !video) {
-      toast.error("Please upload at least one photo or video");
-      return;
-    }
+    setShowErrors(false);
     runAssessment();
   };
 
@@ -803,25 +812,44 @@ export function ClaimsCopilot() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="desc">Incident Description</Label>
+                <Label htmlFor="desc">
+                  Incident Description <span className="text-destructive">*</span>
+                </Label>
                 <Textarea
                   id="desc"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe what happened..."
                   rows={4}
-                  className="mt-1.5"
+                  className={cn(
+                    "mt-1.5",
+                    showErrors && descriptionMissing && "border-destructive focus-visible:ring-destructive",
+                  )}
+                  aria-invalid={showErrors && descriptionMissing}
+                  aria-required="true"
                 />
+                {showErrors && descriptionMissing && (
+                  <p className="text-xs text-destructive mt-1">Incident description is required</p>
+                )}
               </div>
 
               <div className="border-t pt-5">
-                <h3 className="font-medium mb-1">Damage Media</h3>
-                <p className="text-sm text-muted-foreground mb-4">Add damage photos and (optionally) one video</p>
+                <h3 className="font-medium mb-1">
+                  Damage Media <span className="text-destructive">*</span>
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">Add at least one damage photo (video optional)</p>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label className="mb-1.5 block">Images</Label>
-                    <label className="block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50">
+                    <Label className="mb-1.5 block">
+                      Images <span className="text-destructive">*</span>
+                    </Label>
+                    <label
+                      className={cn(
+                        "block border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:bg-muted/50",
+                        showErrors && mediaMissing && "border-destructive bg-destructive/5",
+                      )}
+                    >
                       <input
                         type="file"
                         accept="image/*"
@@ -850,6 +878,9 @@ export function ClaimsCopilot() {
                     </label>
                   </div>
                 </div>
+                {showErrors && mediaMissing && (
+                  <p className="text-xs text-destructive mt-2">At least one photo or video is required</p>
+                )}
 
                 {(images.length > 0 || video) && (
                   <div className="mt-5 space-y-5">
